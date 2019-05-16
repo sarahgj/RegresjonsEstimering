@@ -5,16 +5,16 @@ def input_Tilsig(region):
         fasit_key = '/Sver-Se' + region[-1] + '.Fasit.....-U9100S0BT0105'
     if region == 'NO1':
         max_p = 0.025
-        max_r2 = 100
+        max_r2 = 70
         regPeriod = 52  # 1 year
     elif region == 'NO2':
         max_p = 0.025
-        max_r2 = 100
-        regPeriod = 52 * 2.5  # 2.5 years
+        max_r2 = 70
+        regPeriod = 52  # 1 year
     elif region == 'NO3':
         max_p = 0.025
-        max_r2 = 100
-        regPeriod = 52 * 2.5  # 2.5 years
+        max_r2 = 70
+        regPeriod = 52  # 1 year
     elif region == 'NO4':
         max_p = 0.025
         max_r2 = 100
@@ -39,10 +39,6 @@ def input_Tilsig(region):
         max_p = 0.025
         max_r2 = 100
         regPeriod = 78  # 1.5 year
-    print('INPUT TILSIG', region, ':')
-    print('Høyeste p-verdi (max_p): ', max_p)
-    print('Antall utvalgte serier basert på høyeste R2 som brukes (max_r2): ', max_r2)
-    print('Antall uker den "korte" regresjonen kjøres (regPeriod): ', regPeriod, '\n')
     return fasit_key, max_p, max_r2, regPeriod
 
 
@@ -87,8 +83,4 @@ def input_Magasin(region):
         max_p = 0.0025
         max_r2 = 60
         regPeriod = 78  # 1.5 year
-    print('INPUT MAGASIN', region, ':')
-    print('Høyeste p-verdi (max_p): ', max_p)
-    print('Antall utvalgte serier basert på høyeste R2 som brukes (max_r2): ', max_r2)
-    print('Antall uker den "korte" regresjonen kjøres (regPeriod): ', regPeriod, '\n')
     return fasit_key, max_p, max_r2, regPeriod

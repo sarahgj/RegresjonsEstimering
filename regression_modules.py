@@ -4,7 +4,8 @@ import pytz
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime
+#plt.interactive(False)
+#from datetime import datetime
 from pandas import Timedelta
 
 from shyft.api import utctime_now  # To time the reading from SMG
@@ -13,12 +14,65 @@ import statsmodels.api as sm
 from statkraft.ssa.wrappers import ReadWrapper
 from statkraft.ssa.timeseriesrepository import TimeSeriesRepositorySmg
 from statkraft.ssa.environment import SMG_PROD
-from statkraft.ssa.timeseries import MetaInfo, TimeStepConstraint, PointInterpretation, Calendar, TimeSeries
+#from statkraft.ssa.timeseries import MetaInfo, TimeStepConstraint, PointInterpretation, Calendar, TimeSeries
 from statkraft.ssa.adapter import ts_from_pandas_series
-# from regresjonsverktøy import import_from_SMG
+from pandas.plotting import register_matplotlib_converters
+register_matplotlib_converters()
 
 from import_from_SMG import *
-from chosen_input_variables import *
+
+today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # today
+
+
+
+def get_timeperiods(hva):
+    """This function finds what day it is today and chooses from that information the end of the regression
+    and the time period of which the series should be read.
+
+    Args:
+        hva: Magasin or Tilsig
+
+    Returns:
+        period: time period of which the series should be read (using the ReadWrapper from statkraft.ssa.wrappers)
+        forecast_time: Time of last forecast
+
+    Examples:
+        >>> period, forecast_inf, reg_end_inf, reg_start_inf = get_timeperiods('Tilsig')
+        >>> period, forecast_mag, reg_end_mag, reg_start_mag = get_timeperiods('Magasin')
+    """
+    read_start = '2015.06.08'
+    read_end = today + Timedelta(days=7)
+    # The fasit value appears on wednesday 14 o'clock limiting the end time of the regression.
+    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+        # Since we get the values for the tilsig series one week later than the magasin series, some adjustment
+        # is neccessary.
+        if hva == 'Tilsig':
+            reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=14)
+        elif hva == 'Magasin':
+            reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=7)
+    else:
+        if hva == 'Tilsig':
+            reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=7)
+        elif hva == 'Magasin':
+            reg_mandag = today - Timedelta(days=today.weekday())
+    reg_end = reg_mandag.strftime('%Y.%m.%d')
+    tz = pytz.timezone('Etc/GMT-1')
+    # getting the period from the ReadWrapper from statkraft.ssa.wrappers
+    period = ReadWrapper(start_time=read_start, end_time=read_end, read_from='SMG_PROD', tz=tz)
+    # calculating forecast time and start of regression
+    forecast_time = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") + Timedelta(days=7)).strftime('%Y.%m.%d')
+    # printing out information about the chosen times
+    if hva == 'Tilsig:':
+        print('---------------------------------------------------------------')
+        print('                        TILSIG                                 ')
+        print('---------------------------------------------------------------')
+    elif hva == 'Magasin':
+        print('---------------------------------------------------------------')
+        print('                        MAGASIN                                ')
+        print('---------------------------------------------------------------')
+    print(hva, ' tipping: ', forecast_time)
+    print(period)
+    return period, forecast_time
 
 
 def read_and_setup(hva):
@@ -50,63 +104,19 @@ def read_and_setup(hva):
         df_week = index2week(df_all, hva).loc[:forecast_time]
 
     # feil på siste verdi printes ut
+    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+        last_true_value = forecast_time
+    else:
+        last_true_value = (
+                    pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
+            '%Y.%m.%d')
     for key in df_week:
-        if not df_week[key].loc[forecast_time] > 0:
+        if not df_week[key].loc[last_true_value] > 0:
             print('\n-------------------Feil i kjente %s verdier---------------------------' % hva)
-            print(df_week[key].loc[forecast_time], key)
+            print(df_week[key].loc[last_true_value], key)
             print('\n\n')
 
     return df_week, MagKap_list, period, forecast_time
-
-
-def get_timeperiods(hva):
-    """This function finds what day it is today and chooses from that information the end of the regression
-    and the time period of which the series should be read.
-
-    Args:
-        hva: Magasin or Tilsig
-
-    Returns:
-        period: time period of which the series should be read (using the ReadWrapper from statkraft.ssa.wrappers)
-        forecast_time: Time of last forecast
-
-    Examples:
-        >>> period, forecast_inf, reg_end_inf, reg_start_inf = get_timeperiods('Tilsig')
-        >>> period, forecast_mag, reg_end_mag, reg_start_mag = get_timeperiods('Magasin')
-    """
-    today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # today
-    read_start = '2015.06.08'
-    read_end = today + Timedelta(days=7)
-    # The fasit value appears on wednesday 14 o'clock limiting the end time of the regression.
-    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14) or True:  # True for tipping
-        # Since we get the values for the tilsig series one week later than the magasin series, some adjustment
-        # is neccessary.
-        if hva == 'Tilsig':
-            reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=14)
-        elif hva == 'Magasin':
-            reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=7)
-    else:
-        if hva == 'Tilsig':
-            reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=7)
-        elif hva == 'Magasin':
-            reg_mandag = today - Timedelta(days=today.weekday())
-    reg_end = reg_mandag.strftime('%Y.%m.%d')
-    tz = pytz.timezone('Etc/GMT-1')
-    # getting the period from the ReadWrapper from statkraft.ssa.wrappers
-    period = ReadWrapper(start_time=read_start, end_time=read_end, read_from='SMG_PROD', tz=tz)
-    # calculating forecast time and start of regression
-    forecast_time = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") + Timedelta(days=7)).strftime('%Y.%m.%d')
-    # printing out information about the chosen times
-    if hva == 'Tilsig:':
-        print('---------------------------------------------------------------')
-        print('                        TILSIG                                 ')
-        print('---------------------------------------------------------------')
-    elif hva == 'Magasin':
-        print('---------------------------------------------------------------')
-        print('                        MAGASIN                                ')
-        print('---------------------------------------------------------------')
-    print(hva, ' tipping: ', forecast_time)
-    return period, forecast_time
 
 
 def read_import_SMG(hva, list_dict, list_names, period):
@@ -248,10 +258,10 @@ def regression(df_tot, fasit_key, chosen, max_p):
     return results, chosen_p, ant_break
 
 
-def show_result(fasit_key, fasit, max_r2, max_p, long_results, short_results, df_tot, chosen_p, r2_modelled, prediction,
-                n, tipping_df, reg_end, regPeriod):
+def show_result(show_result_input):
     """This function prints out and plots the results from the regression."""
-    today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # today
+    fasit_key, fasit, max_r2, max_p, long_results, short_results, df_tot, chosen_p, r2_modelled, prediction, tipping_df, reg_end, regPeriod = show_result_input
+    plt.interactive(False)
     reg_start = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") - Timedelta(days=regPeriod * 7)).strftime(
         '%Y.%m.%d')
     print('-----------------------------------------------------------------------')
@@ -264,38 +274,47 @@ def show_result(fasit_key, fasit, max_r2, max_p, long_results, short_results, df
     print('Fasit:\n', fasit[fasit_key][-4:])
     print('\nModdelert/Tippet:\n', tipping_df[-4:])
 
+    if fasit_key[-3:] == '105':
+        color_tipping = 'blue'
+    elif fasit_key[-3:] == '132':
+        color_tipping = 'lightblue'
+
     # Plot with regression:
     plt.figure(figsize=(16, 10))
-    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14) or True:  # True for tipping
-        plt.plot(fasit[fasit_key].loc[:reg_end], label='fasit')
+    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+        plt.plot(fasit[fasit_key].loc[:reg_end], color='k', linewidth=2.0, label='fasit')
     else:
-        plt.plot(fasit[fasit_key].loc[:], label='fasit')
-    plt.plot(short_results.predict(df_tot[chosen_p].loc[reg_start:reg_end]), label='regresjon (kort periode)')
-    plt.plot(short_results.predict(df_tot[chosen_p].loc[:reg_start]), label='modell på historie (kort periode)')
-    plt.plot(long_results.predict(df_tot[chosen_p].loc[:reg_start]), label='modell på historie (lang periode)')
-    plt.plot(tipping_df, label='tipping')  # , marker='o')
+        plt.plot(fasit[fasit_key].loc[:], color='k', linewidth=2.0, label='fasit')
+    plt.plot(short_results.predict(df_tot[chosen_p].loc[reg_start:reg_end]), color='orange',
+             label='regresjon (kort periode)')
+    plt.plot(short_results.predict(df_tot[chosen_p].loc[:reg_start]), color='deeppink',
+             label='modell på historie (kort periode)')
+    plt.plot(long_results.predict(df_tot[chosen_p].loc[:reg_start]), color='cyan',
+             label='modell på historie (lang periode)')
+    plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
     plt.title('Regresjon for: %s' % fasit_key)
     plt.legend()
 
     # Plot just prediction:
     plt.figure(figsize=(16, 10))
-    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14) or True:  # True for tipping
-        plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:], label='fasit')
+    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+        plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:], color='k', linewidth=2.0, label='fasit')
     else:
-        plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:reg_end], label='fasit')
-    plt.plot(tipping_df, label='tipping', color='purple')  # , marker='o')
+        plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:reg_end], color='k', linewidth=2.0, label='fasit')
+    plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
     plt.title('Tipping for: %s' % fasit_key)
     plt.legend()
 
     # Plot just prediction:
     plt.figure(figsize=(16, 10))
-    plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:], label='fasit')
+    plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:], color='k', linewidth=3.0, label='fasit')
     for key in chosen_p:
         if fasit_key[-3:] == '105':
             sfac = df_tot[fasit_key].mean() / df_tot[key].mean()
             plt.plot(df_tot[key].loc[tipping_df.index[0]:] * sfac)  # , marker='o')
         elif fasit_key[-3:] == '132':
             plt.plot(df_tot[key].loc[tipping_df.index[0]:])  # , marker='o')
+    plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
     plt.title('Regresjonsserier for: %s' % fasit_key)
     plt.legend()
 
@@ -326,7 +345,6 @@ def write_SMG_regresjon(hva, region, df):
 
 
 def write_V_SMG_Regresjon(df_tot, results, chosen_p, fasit_key, r2_modelled, MagKap_mag=False):
-    today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
     expression = str('! Sist oppdatert {}\n!R2 med {} serier: {}\n'.format(today, len(chosen_p), r2_modelled))
     vekt_serie = "F{tall}={serie}*{vekt}\n"
     region = str(fasit_key[6:9])
@@ -371,27 +389,17 @@ def write_V_SMG_Regresjon(df_tot, results, chosen_p, fasit_key, r2_modelled, Mag
     smg.update_virtual({info[0]: expression})
 
 
-############################################################################################
-# Write virtual
-# if MagKap:
-#    write_V_SMG_Regresjon(df_tot,short_results,chosen_p,fasit_key, r2_modelled, MagKap)
-# else:
-#    write_V_SMG_Regresjon(df_tot,short_results,chosen_p,fasit_key, r2_modelled)
-
-
-def regresjonstipping(hva, region, auto_input, fasit_key, max_p, max_r2, regPeriod):
+def make_estimate(hva, region, auto_input, fasit_key, max_p, max_r2, regPeriod):
     df_week, MagKap, period, forecast_time = auto_input
-    print('running..\n')
-
-    today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # today
     reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime('%Y.%m.%d')
-    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14) or True:  # True for tipping
-        fasit = period.read(fasit_key).loc[:reg_end]
-    else:
-        fasit = period.read(fasit_key).loc[:forecast_time]
+    fasit = period.read([fasit_key]).loc[:reg_end]
 
     # df_tot = deletingNaNs(df_week.loc[:(pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") + Timedelta(days=7)).strftime('%Y.%m.%d')]).join(fasit)
-    df_cleaned = deletingNaNs(df_week.loc[:forecast_time])
+    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+        last_forecast = forecast_time
+    else:
+        last_forecast = reg_end
+    df_cleaned = deletingNaNs(df_week.loc[:last_forecast])
     df_tot = df_cleaned.join(fasit)
 
     #########################################################################################
@@ -399,13 +407,11 @@ def regresjonstipping(hva, region, auto_input, fasit_key, max_p, max_r2, regPeri
     reg_end_new = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(
         days=start_tipping)).strftime('%Y.%m.%d')  # 6*52
     forecast_time_new = True
-    n = 0
     tipping_times = []
     tipping_values = []
     ant_break_long = 0
     ant_break_short = 0
-    while forecast_time_new != forecast_time:
-        # n+=1
+    while forecast_time_new != last_forecast:
         forecast_time_new = (
                     pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime(
             '%Y.%m.%d')
@@ -428,15 +434,15 @@ def regresjonstipping(hva, region, auto_input, fasit_key, max_p, max_r2, regPeri
                 r2_original[key] = calc_R2(df_tot_new[fasit_key], df_tot_new[key])
 
         # Chosing the chosen number of best r2 keys
-        chosen_r2 = list(r2_original.sort_values(ascending=False).axes[0][range(max_r2)])
+        sorted_r2 = r2_original.sort_values(ascending=False)
+        chosen_r2 = list(sorted_r2.axes[0][range(max_r2)])
 
         # Regresjon
         long_results, chosen_p, ant_break = regression(df_tot_new, fasit_key, chosen_r2, max_p)
         ant_break_long += ant_break
         r2_modelled = calc_R2(df_tot_new[fasit_key], long_results.predict(df_tot_new[chosen_p]))
 
-        short_results, chosen_p, ant_break_short = regression(df_tot_new.loc[reg_start:reg_end_new], fasit_key,
-                                                              chosen_p, 1)
+        short_results, chosen_p, ant_break_short = regression(df_tot_new.loc[reg_start:reg_end_new], fasit_key, chosen_p, 1)
         ant_break_short += ant_break
         prediction = short_results.predict(df_cleaned[chosen_p]).loc[reg_end_new:forecast_time_new]
         # print(df_cleaned['/Glom-Krv.NO1.EMPS..-U9104S0BT0132'].loc[reg_end_new:forecast_time_new])
@@ -447,13 +453,25 @@ def regresjonstipping(hva, region, auto_input, fasit_key, max_p, max_r2, regPeri
         tipping_values.append(prediction[-1])
         ####################################################################################
 
+    print('%s var serien med laveste R2 tatt med i chosen_r2 utvalget, R2 var %.2f\n'%(sorted_r2.index[max_r2],sorted_r2.values[max_r2]))
     print('Antall stopp av loopen som luker ut for høye p pga minimum antall serier i den lange regresjonen: ',
           ant_break_long, '/', len(tipping_times), '\n\n')
     tipping_df = pd.Series(tipping_values, index=tipping_times)
-    show_result(fasit_key, fasit, max_r2, max_p, long_results, short_results, df_tot, chosen_p, r2_modelled, prediction,
-                n, tipping_df, reg_end, regPeriod)
 
+    return fasit_key, fasit, max_r2, max_p, long_results, short_results, df_tot, chosen_p, r2_modelled, prediction, tipping_df, reg_end, regPeriod
+
+
+def make_estimate_and_write(hva, region, auto_input, fasit_key, max_p, max_r2, regPeriod):
+    print('\nINPUT TILSIG', region, ':')
+    print('Høyeste p-verdi (max_p): ', max_p)
+    print('Antall utvalgte serier basert på høyeste R2 som brukes (max_r2): ', max_r2)
+    print('Antall uker den "korte" regresjonen kjøres (regPeriod): ', regPeriod, '\n')
+    df_week, MagKap, period, forecast_time = auto_input
+    tipping_output = make_estimate(hva, region, auto_input, fasit_key, max_p, max_r2, regPeriod)
+    [fasit_key, fasit, max_r2, max_p, long_results, short_results, df_tot, chosen_p, r2_modelled, prediction, tipping_df, reg_end, regPeriod] = tipping_output
     # write to SMG:
     write_SMG_regresjon(hva, region, tipping_df)
-    # virtual:
+    # write to SMG, virtual:
     write_V_SMG_Regresjon(df_tot, short_results, chosen_p, fasit_key, r2_modelled, MagKap)
+    show_results_input = [fasit_key, fasit, max_r2, max_p, long_results, short_results, df_tot, chosen_p, r2_modelled, prediction, tipping_df, reg_end, regPeriod]
+    return show_results_input
