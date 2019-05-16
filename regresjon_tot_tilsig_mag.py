@@ -5,7 +5,6 @@ import os
 import traceback
 
 from regression_modules import *
-from chosen_input_variables import *
 
 sti_til_logfilområde = ''
 
@@ -22,25 +21,17 @@ logging.info('autojob started.')
 
 
 try:
+    auto_input = {}
+    auto_input['tilsig'] = read_and_setup('tilsig')
+    auto_input['magasin'] = read_and_setup('magasin')
 
-    auto_input_tilsig = read_and_setup('Tilsig')
-    auto_input_magasin = read_and_setup('Magasin')
+    var = ['magasin', 'tilsig']
+    reg = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']
 
-    all_regions = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']
-    norge = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5']
-    sverige = ['SE1', 'SE2', 'SE3', 'SE4']
-
-    for region in all_regions:
-        # Tilsig
-        fasit_key, max_p, max_r2, regPeriod = input_Tilsig(region)
-        show_result_input = make_estimate_and_write('Tilsig', region, auto_input_tilsig, fasit_key, max_p, max_r2,
-                                                    regPeriod)
-        # show_result(show_result_input)
-        # Magasin
-        fasit_key, max_p, max_r2, regPeriod = input_Magasin(region)
-        show_result_input = make_estimate_and_write('Magasin', region, auto_input_magasin, fasit_key, max_p, max_r2,
-                                                    regPeriod)
-        # show_result(show_result_input)
+    for variable in var:
+        for region in reg:
+            show_result_input = make_estimate_and_write(variable, region, auto_input[variable])
+            show_result(show_result_input)
     logging.info('Script ran successfully')
 
 
