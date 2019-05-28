@@ -39,40 +39,40 @@ def default_tilsig(region):
         fasit_key = '/Sver-Se' + region[-1] + '.Fasit.....-U9100S0BT0105'
     if region == 'NO1':
         max_p = 0.025
-        ant_kandidater = 140
-        reg_period = 120
+        ant_kandidater = 10
+        reg_period = 10
     elif region == 'NO2':
         max_p = 0.025
-        ant_kandidater = 60
-        reg_period = 120
+        ant_kandidater = 110
+        reg_period = 50
     elif region == 'NO3':
         max_p = 0.025
-        ant_kandidater = 70
-        reg_period = 120
+        ant_kandidater = 30
+        reg_period = 100
     elif region == 'NO4':
         max_p = 0.025
-        ant_kandidater = 54
-        reg_period = 120
+        ant_kandidater = 120
+        reg_period = 100
     elif region == 'NO5':
         max_p = 0.025
-        ant_kandidater = 135
-        reg_period = 60
+        ant_kandidater = 80
+        reg_period = 50
     elif region == 'SE1':
         max_p = 0.025
-        ant_kandidater = 40
-        reg_period = 60
+        ant_kandidater = 100
+        reg_period = 70
     elif region == 'SE2':
         max_p = 0.025
-        ant_kandidater = 170
-        reg_period = 90
+        ant_kandidater = 70
+        reg_period = 80
     elif region == 'SE3':
         max_p = 0.025
-        ant_kandidater = 146
-        reg_period = 60
+        ant_kandidater = 130
+        reg_period = 50
     elif region == 'SE4':
         max_p = 0.025
-        ant_kandidater = 40
-        reg_period = 90
+        ant_kandidater = 50
+        reg_period = 50
     return fasit_key, reg_period, max_p, ant_kandidater
 
 
@@ -98,38 +98,38 @@ def default_magasin(region):
         fasit_key = '/Sver-SE' + region[-1] + '.Fasit.....-U9104A5R-0132'
     if region == 'NO1':
         max_p = 0.025
-        ant_kandidater = 97
-        reg_period = 204
+        ant_kandidater = 60
+        reg_period = 80
     elif region == 'NO2':
         max_p = 0.025
-        ant_kandidater = 67
+        ant_kandidater = 40
         reg_period = 60
     elif region == 'NO3':
         max_p = 0.025
-        ant_kandidater = 22
-        reg_period = 90
+        ant_kandidater = 90
+        reg_period = 50
     elif region == 'NO4':
         max_p = 0.025
-        ant_kandidater = 52
-        reg_period = 90
+        ant_kandidater = 90
+        reg_period = 70
     elif region == 'NO5':
         max_p = 0.025
-        ant_kandidater = 112
-        reg_period = 60
+        ant_kandidater = 110
+        reg_period = 50
     elif region == 'SE1':
         max_p = 0.025
-        ant_kandidater = 90
-        reg_period = 90
+        ant_kandidater = 80
+        reg_period = 30
     elif region == 'SE2':
         max_p = 0.025
-        ant_kandidater = 61
-        reg_period = 60
+        ant_kandidater = 20
+        reg_period = 50
     elif region == 'SE3':
         max_p = 0.025
-        ant_kandidater = 120
-        reg_period = 150
+        ant_kandidater = 90
+        reg_period = 50
     elif region == 'SE4':
         max_p = 0.025
-        ant_kandidater = 67
-        reg_period = 204
+        ant_kandidater = 110
+        reg_period = 50
     return fasit_key, reg_period, max_p, ant_kandidater
