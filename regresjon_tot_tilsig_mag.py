@@ -3,9 +3,11 @@ from datetime import datetime
 import logging
 import os
 import traceback
+from shyft.api import utctime_now
 
 from regression_modules import *
 
+start_time = utctime_now()
 sti_til_logfilområde = ''
 
 log_file = os.path.join(sti_til_logfilområde,  # folder with log files
@@ -32,7 +34,7 @@ try:
         for region in reg:
             show_result_input = make_estimate_and_write(variable, region, auto_input[variable])
             show_result(show_result_input)
-    logging.info('Script ran successfully')
+    logging.info('\nThe script ran successfully and used a total of %.0f minutes\n' %((utctime_now() - start_time)/60))
 
 
 except Exception as e:

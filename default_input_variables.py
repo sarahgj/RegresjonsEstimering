@@ -98,24 +98,24 @@ def default_magasin(region):
         fasit_key = '/Sver-SE' + region[-1] + '.Fasit.....-U9104A5R-0132'
     if region == 'NO1':
         max_p = 0.025
-        ant_kandidater = 60
-        reg_period = 80
+        ant_kandidater = 140
+        reg_period = 120
     elif region == 'NO2':
         max_p = 0.025
-        ant_kandidater = 40
-        reg_period = 60
+        ant_kandidater = 60
+        reg_period = 120
     elif region == 'NO3':
         max_p = 0.025
-        ant_kandidater = 90
-        reg_period = 50
+        ant_kandidater = 70
+        reg_period = 120
     elif region == 'NO4':
         max_p = 0.025
-        ant_kandidater = 90
-        reg_period = 70
+        ant_kandidater = 54
+        reg_period = 120
     elif region == 'NO5':
         max_p = 0.025
-        ant_kandidater = 110
-        reg_period = 50
+        ant_kandidater = 135
+        reg_period = 60
     elif region == 'SE1':
         max_p = 0.025
         ant_kandidater = 80
