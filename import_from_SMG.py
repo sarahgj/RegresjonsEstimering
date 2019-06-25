@@ -901,18 +901,9 @@ def import_tilsig():
         'Vikf-Maalset': ['/Vikf-Maalset.......-U9100S3BT0104'],
         'Vikf-Refsdal': ['/Vikf-Refsdal.......-U9100S3BT0104']}
 
-    # SVEIN SITT ØNSKE:
-    # return [NO1, NO2, NO3, NO4, NO5, SE1, SE2, SE3, SE4, kjente, ukjente, tipping, MagEndr1, MagEndr2, MagEndr3, MagEndr4, MagEndr5, regresjon], ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'Tilsig kjente pr prisområde', 'Tilsig ukjente pr prisområde','BesteEstimat, Q_obse, Q_NFB', 'Tilsig basert på magasinendring pluss Kpp-prod, Del1', 'Del2', 'Del3', 'Del4', 'Del5', 'RegresjonKjenteMag, RegresjonUkjenteMag']
     return [NO1, NO2, NO3, NO4, NO5, SE1, SE2, SE3, SE4, kjente, ukjente, tipping, MagEndr1, MagEndr2, MagEndr3,
-            MagEndr4, MagEndr5, KrfoDel1, KrfoDel2, KrfoDel3, KrfoDel4, KrfoDel5, KrfoDel6], ['NO1', 'NO2', 'NO3',
-                                                                                              'NO4', 'NO5', 'SE1',
-                                                                                              'SE2', 'SE3', 'SE4',
-                                                                                              'Tilsig kjente pr prisområde',
-                                                                                              'Tilsig ukjente pr prisområde',
-                                                                                              'BesteEstimat, Q_obse, Q_NFB',
-                                                                                              'Tilsig basert på magasinendring pluss Kpp-prod, Del1',
-                                                                                              'Del2', 'Del3', 'Del4',
-                                                                                              'Del5',
-                                                                                              'Tilsiget pr kraftverksområde: Del1',
-                                                                                              'Del2', 'Del3', 'Del4',
-                                                                                              'Del5', 'Del6']
+            MagEndr4, MagEndr5, KrfoDel1, KrfoDel2, KrfoDel3, KrfoDel4, KrfoDel5, KrfoDel6], \
+           ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4',
+            'Tilsig kjente pr prisområde', 'Tilsig ukjente pr prisområde', 'BesteEstimat, Q_obse, Q_NFB',
+            'Tilsig basert på magasinendring pluss Kpp-prod, Del1', 'Del2', 'Del3', 'Del4', 'Del5',
+            'Tilsiget pr kraftverksområde: Del1', 'Del2', 'Del3', 'Del4', 'Del5', 'Del6']
