@@ -4,8 +4,8 @@ import pytz
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-# plt.interactive(False)
-# from datetime import datetime
+#plt.interactive(False)
+#from datetime import datetime
 from pandas import Timedelta
 
 from shyft.api import utctime_now  # To time the reading from SMG
@@ -14,14 +14,14 @@ import statsmodels.api as sm
 from statkraft.ssa.wrappers import ReadWrapper
 from statkraft.ssa.timeseriesrepository import TimeSeriesRepositorySmg
 from statkraft.ssa.environment import SMG_PROD
-# from statkraft.ssa.timeseries import MetaInfo, TimeStepConstraint, PointInterpretation, Calendar, TimeSeries
+#from statkraft.ssa.timeseries import MetaInfo, TimeStepConstraint, PointInterpretation, Calendar, TimeSeries
 from statkraft.ssa.adapter import ts_from_pandas_series
 from pandas.plotting import register_matplotlib_converters
-
 register_matplotlib_converters()
 
 from import_from_SMG import *
 from default_input_variables import *
+
 
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # today
 
