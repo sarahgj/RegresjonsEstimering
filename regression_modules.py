@@ -598,28 +598,28 @@ def make_estimate_while_looping(variable, region, auto_input, reg_period, max_p,
 
 def get_default_variables(variable, region, reg_period, max_p, ant_kandidater):
     print('\n')
-    default = get_default(variable, region)  # default=[fasit_key, reg_period, max_p, ant_kandidater]
+    default = get_default(variable, region) #default=[fasit_key, reg_period, max_p, ant_kandidater]
     fasit_key = default[0]
-    if ((reg_period, max_p, ant_kandidater) != default[1:]) and (reg_period, max_p, ant_kandidater) != (
-    False, False, False):
-        print('ENDRET INPUT MAGASIN NO1:')
-    if (ant_kandidater != False) and (ant_kandidater != default[3]):
-        print('ant_kandidater: %.2f' % ant_kandidater)
+    if ((reg_period, max_p, ant_kandidater) != default[1:]) and (reg_period, max_p, ant_kandidater) != (False,False,False):
+        print('ENDRET INPUT:')
+    if (ant_kandidater!=False) and (ant_kandidater != default[3]):
+        print('ant_kandidater: %.2f'%ant_kandidater)
     else:
         ant_kandidater = default[3]
-    if (max_p != False) and (max_p != default[2]):
-        print('max_p: %.5f' % max_p)
+    if (max_p!=False) and (max_p != default[2]):
+        print('max_p: %.5f'%max_p)
     else:
         max_p = default[2]
     if (0 < reg_period < 200) and (reg_period != default[1]):
-        print('reg_period: %i uker' % reg_period)
+        print('reg_period: %i uker'%reg_period)
     elif reg_period > 200:
         print('Antall uker (reg_period) valgt for den korte, siste regresjonen var for lang.')
-    # elif (200 < reg_period <= 0):
+    #elif (200 < reg_period <= 0):
     #    raise Exception('reg_period = {} er for høy eller lav, prøv med: 200 >= reg_period > 0.'.format(reg_period))
     else:
         reg_period = default[1]
     return fasit_key, reg_period, max_p, ant_kandidater
+
 
 
 def make_estimate_and_write(variable, region, auto_input, reg_period=False, max_p=False, ant_kandidater=False):
