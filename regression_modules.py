@@ -623,17 +623,13 @@ def get_default_variables(variable, region, reg_period, max_p, ant_kandidater):
 
 
 def make_estimate_and_write(variable, region, auto_input, reg_period=False, max_p=False, ant_kandidater=False):
-    fasit_key, reg_period, max_p, ant_kandidater = get_default_variables(variable, region, reg_period, max_p,
-                                                                         ant_kandidater)
-    df_week, MagKap, period, forecast_time = auto_input
+    fasit_key, reg_period, max_p, ant_kandidater = get_default_variables(variable, region, reg_period, max_p, ant_kandidater)
+    df_week, MagKap, period, forecast_time, read_start = auto_input
     tipping_output = make_estimate(variable, region, auto_input, fasit_key, reg_period, max_p, ant_kandidater)
-    [fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end,
-     reg_period, ant_break_long, nb_weeks_tipping] = tipping_output
+    [fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping, read_start] = tipping_output
     # write to SMG:
     write_SMG_regresjon(variable, region, tipping_df)
     # write to SMG, virtual:
     write_V_SMG_Regresjon(df_tot, short_results, chosen_p, fasit_key, r2_modelled, MagKap)
-    show_results_input = [fasit_key, ant_kandidater, max_p, fasit, long_results, short_results, df_tot, chosen_p,
-                          chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long,
-                          nb_weeks_tipping]
+    show_results_input = [fasit_key, ant_kandidater, max_p, fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping, read_start]
     return show_results_input
