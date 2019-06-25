@@ -503,6 +503,99 @@ def make_estimate(variable, region, auto_input, fasit_key, reg_period, max_p, an
     return fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping, read_start
 
 
+def make_fasit_key(variable, region):
+    if ('N' in region) and (variable == 'tilsig'):
+        fasit_key = '/Norg-No' + region[-1] + '.Fasit.....-U9100S0BT0105'
+    elif ('S' in region) and (variable == 'tilsig'):
+        fasit_key = '/Sver-Se' + region[-1] + '.Fasit.....-U9100S0BT0105'
+    if ('N' in region) and (variable == 'magasin'):
+        fasit_key = '/Norg-NO' + region[-1] + '.Fasit.....-U9104A5R-0132'
+    elif ('S' in region) and (variable == 'magasin'):
+        fasit_key = '/Sver-SE' + region[-1] + '.Fasit.....-U9104A5R-0132'
+    return fasit_key
+
+
+def make_estimate_while_looping(variable, region, auto_input, reg_period, max_p, ant_kandidater):
+    fasit_key = make_fasit_key(variable, region)
+    df_week, MagKap, period, forecast_time, read_start = auto_input
+    reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime('%Y.%m.%d')
+    fasit = period.read([fasit_key]).loc[:reg_end]
+
+    # df_tot = deletingNaNs(df_week.loc[:(pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") + Timedelta(days=7)).strftime('%Y.%m.%d')]).join(fasit)
+    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+        last_forecast = forecast_time
+    else:
+        last_forecast = reg_end
+    df_cleaned = deletingNaNs(df_week.loc[:last_forecast])
+    df_tot = df_cleaned.join(fasit)
+
+    #########################################################################################
+    nb_weeks_tipping = 10  # number of weeks to do tipping back in time
+    start_tipping = 7 * nb_weeks_tipping
+    reg_end_new = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(
+        days=start_tipping)).strftime('%Y.%m.%d')  # 6*52
+    forecast_time_new = True
+    tipping_times = []
+    tipping_values = []
+    ant_break_long = 0
+    ant_break_short = 0
+    ant_kandidater_error = False
+    max_input_error = False
+    while forecast_time_new != last_forecast:
+        forecast_time_new = (
+                pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime(
+            '%Y.%m.%d')
+        reg_start = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") - Timedelta(
+            days=reg_period * 7)).strftime('%Y.%m.%d')
+        df_tot_new = df_tot[:reg_end_new]
+        r2_original = pd.Series()
+        for key in df_cleaned:
+            if variable == 'tilsig':
+                if df_tot_new[key].mean() == 0:
+                    print('passed for ', key, 'mean = 0')
+                    pass
+                else:
+                    scalefac = df_tot_new[fasit_key].mean() / df_tot_new[key].mean()
+                    r2_original[key] = calc_R2(df_tot_new[fasit_key], df_tot_new[key] * scalefac)
+            elif variable == 'magasin':
+                r2_original[key] = calc_R2(df_tot_new[fasit_key], df_tot_new[key])
+
+        # Chosing the chosen number of best r2 keys
+        sorted_r2 = r2_original.sort_values(ascending=False)
+        max_input_series = 196
+        if ant_kandidater > max_input_series:
+            ant_kandidater_error = '\nFeilmelding: Ønsket antall kandidater overskrider maks (%i), passed.' % maks
+            pass
+            chosen_r2 = list(sorted_r2.axes[0][:maks])
+        else:
+            chosen_r2 = list(sorted_r2.axes[0][:ant_kandidater])
+        # Regresjon
+        long_results, chosen_p, ant_break = regression(df_tot_new, fasit_key, chosen_r2, max_p)
+        ant_break_long += ant_break
+
+        short_results, chosen_p, ant_break_short = regression(df_tot_new.loc[reg_start:reg_end_new], fasit_key,
+                                                              chosen_p, 1)
+        r2_modelled = calc_R2(df_tot_new.loc[reg_start:reg_end_new][fasit_key],
+                              short_results.predict(df_tot_new.loc[reg_start:reg_end_new][chosen_p]))
+        ant_break_short += ant_break
+        prediction = short_results.predict(df_cleaned[chosen_p]).loc[reg_end_new:forecast_time_new]
+        # print(df_cleaned['/Glom-Krv.NO1.EMPS..-U9104S0BT0132'].loc[reg_end_new:forecast_time_new])
+        reg_end_new = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime(
+            '%Y.%m.%d')
+        tipping_times.append(prediction.index[-1])
+        # print('tipping: ', prediction.index[-1])
+        tipping_values.append(prediction[-1])
+        ####################################################################################
+    tipping_df = pd.Series(tipping_values, index=tipping_times)
+    r2_tippet = calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])
+    if ant_kandidater_error:
+        print(ant_kandidater_error)
+    r_samlet = (r2_modelled * 0.5 + r2_tippet * 0.5)
+    ant_serier = len(chosen_p) if len(chosen_p) >= 6 else 6
+    print(ant_kandidater, ant_serier, r2_modelled, r2_tippet, r_samlet, reg_period, max_p)
+    return ant_kandidater, ant_serier, r2_modelled, r2_tippet, r_samlet, reg_period, max_p
+
+
 def get_default_variables(variable, region, reg_period, max_p, ant_kandidater):
     print('\n')
     default = get_default(variable, region)  # default=[fasit_key, reg_period, max_p, ant_kandidater]
