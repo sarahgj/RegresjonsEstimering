@@ -73,7 +73,7 @@ def get_timeperiods(variable):
         print('---------------------------------------------------------------')
     print(variable, ' tipping: ', forecast_time)
     print(period)
-    return period, forecast_time
+    return period, forecast_time, read_start
 
 
 def read_and_setup(variable):
