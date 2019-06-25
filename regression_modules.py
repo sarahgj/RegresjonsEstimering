@@ -96,7 +96,7 @@ def read_and_setup(variable):
         list_dict, list_names_dict = import_tilsig()
     elif variable == 'magasin':
         list_dict, list_names_dict = import_magasiner()
-    period, forecast_time = get_timeperiods(variable)
+    period, forecast_time, read_start = get_timeperiods(variable)
     df_all, MagKap_list = read_import_SMG(variable, list_dict, list_names_dict, period)
     if variable == 'magasin':
         corrected_mag = GWh2percentage(df_all, MagKap_list)
@@ -109,7 +109,7 @@ def read_and_setup(variable):
         last_true_value = forecast_time
     else:
         last_true_value = (
-                pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
+                    pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
             '%Y.%m.%d')
     for key in df_week:
         if not df_week[key].loc[last_true_value] > 0:
@@ -117,7 +117,7 @@ def read_and_setup(variable):
             print(df_week[key].loc[last_true_value], key)
             print('\n\n')
 
-    return df_week, MagKap_list, period, forecast_time
+    return df_week, MagKap_list, period, forecast_time, read_start
 
 
 def read_import_SMG(variable, list_dict, list_names, period):
