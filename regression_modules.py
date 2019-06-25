@@ -427,7 +427,7 @@ def regression(df_tot, fasit_key, chosen, max_p):
 
 
 def make_estimate(variable, region, auto_input, fasit_key, reg_period, max_p, ant_kandidater):
-    df_week, MagKap, period, forecast_time = auto_input
+    df_week, MagKap, period, forecast_time, read_start = auto_input
     reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime('%Y.%m.%d')
     fasit = period.read([fasit_key]).loc[:reg_end]
 
@@ -500,7 +500,7 @@ def make_estimate(variable, region, auto_input, fasit_key, reg_period, max_p, an
     if ant_kandidater_error:
         print(ant_kandidater_error)
 
-    return fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping
+    return fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping, read_start
 
 
 def get_default_variables(variable, region, reg_period, max_p, ant_kandidater):
