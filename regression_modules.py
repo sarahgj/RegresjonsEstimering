@@ -353,7 +353,8 @@ def write_SMG_regresjon(variable, region, df):
 
 
 def write_V_SMG_Regresjon(df_tot, results, chosen_p, fasit_key, r2_modelled, MagKap_mag=False):
-    expression = str('! Sist oppdatert {}\n!R2 med {} serier: {}\n'.format(today, len(chosen_p), r2_modelled))
+    now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
+    expression = str('! Sist oppdatert {}\n!R2 med {} serier: {}\n'.format(now, len(chosen_p), r2_modelled))
     vekt_serie = "F{tall}={serie}*{vekt}\n"
     region = str(fasit_key[6:9])
 
@@ -391,9 +392,9 @@ def write_V_SMG_Regresjon(df_tot, results, chosen_p, fasit_key, r2_modelled, Mag
     smg = TimeSeriesRepositorySmg(SMG_PROD)
     print('Skriver formel for siste regresjon til: ', ts)
     info = smg.get_meta_info_by_name([ts])
-    # print('-----------------------------------------------------------------------')
-    # print(expression)
-    # print('-----------------------------------------------------------------------')
+    #print('-----------------------------------------------------------------------')
+    #print(expression)
+    #print('-----------------------------------------------------------------------')
     smg.update_virtual({info[0]: expression})
 
 
