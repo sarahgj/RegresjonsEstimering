@@ -259,46 +259,73 @@ def show_result(show_result_input):
     elif fasit_key[-3:] == '132':
         color_tipping = 'lightblue'
 
-    if False:
-        # Plot with regression:
-        plt.figure(figsize=(16, 10))
-        if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
-            plt.plot(fasit[fasit_key].loc[:reg_end], color='k', linewidth=2.0, label='fasit')
-        else:
-            plt.plot(fasit[fasit_key].loc[:], color='k', linewidth=2.0, label='fasit')
-        plt.plot(short_results.predict(df_tot[chosen_p].loc[reg_start:reg_end]), color='orange',
-                 label='regresjon på historie(kort periode)')
-        plt.plot(long_results.predict(df_tot[chosen_p].loc[:reg_start]), color='cyan',
-                 label='regresjon på historie (lang periode)')
-        plt.plot(short_results.predict(df_tot[chosen_p].loc[:reg_start]), color='deeppink',
-                 label='modell på historie (kort periode)')
-        plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
-        plt.title('Regresjon for: %s' % fasit_key)
-        plt.legend()
 
-        # Plot just prediction:
-        plt.figure(figsize=(16, 10))
-        if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
-            plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:], color='k', linewidth=2.0, label='fasit')
-        else:
-            plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:reg_end], color='k', linewidth=2.0, label='fasit')
-        plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
-        plt.title('Tipping for: %s' % fasit_key)
-        plt.legend()
+def show_result_jupyter(show_result_input):
+    """This function prints out and plots the results from the regression."""
+    fasit_key, ant_kandidater, max_p, fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping, read_start = show_result_input
+    plt.interactive(False)
+    reg_start = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") - Timedelta(days=reg_period * 7)).strftime(
+        '%Y.%m.%d')
+    print('\n-----------------------------------------------------------------------')
+    print('RESULTATER FOR %s\n' % fasit_key)
+    print('Regresjonsperiode brukt til setup for siste tipping: %s til: %s.' % (read_start, reg_end))
+    print('Regresjonsperiode brukt på modellen for siste tipping: %s til: %s.' % (reg_start, reg_end))
+    print('Valgte %.2f kandidater til regresjonen utifra korrelasjon med fasitserien.' % (ant_kandidater))
+    print('Valgte så ut de med p-value < %.5f, som var %i stk.' % (max_p, len(long_results.pvalues)))
+    print('Antall stopp av loopen som luker ut for høye p pga minimum antall serier i den lange regresjonen: %i/%i' % (
+    ant_break_long, nb_weeks_tipping))
+    print('R2 for regresjonen (kort periode): %.5f' % r2_modelled)
+    # start_tipping = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") - Timedelta(days=7*(nb_weeks_tipping-2))).strftime('%Y.%m.%d')
+    print('R2 mellom fasit og tipping: %.5f\n' % (
+        calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])))
 
-        # Plot input series:
-        plt.figure(figsize=(16, 10))
-        plt.plot(fasit[fasit_key], color='k', linewidth=3.0, label='fasit')
-        for key in chosen_p:
-            if fasit_key[-3:] == '105':
-                sfac = df_tot[fasit_key].mean() / df_tot[key].mean()
-                plt.plot(df_tot[key] * sfac)  # , marker='o')
-            elif fasit_key[-3:] == '132':
-                plt.plot(df_tot[key])  # , marker='o')
-        plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
-        plt.title('Regresjonsserier for: %s' % fasit_key)
-        plt.legend()
-        plt.show()
+    print('Fasit:\n', fasit[fasit_key][-4:])
+    print('\nModdelert/Tippet:\n', tipping_df[-5:])
+
+    if fasit_key[-3:] == '105':
+        color_tipping = 'blue'
+    elif fasit_key[-3:] == '132':
+        color_tipping = 'lightblue'
+
+    # Plot with regression:
+    plt.figure(figsize=(16, 10))
+    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+        plt.plot(fasit[fasit_key].loc[:reg_end], color='k', linewidth=2.0, label='fasit')
+    else:
+        plt.plot(fasit[fasit_key].loc[:], color='k', linewidth=2.0, label='fasit')
+    plt.plot(short_results.predict(df_tot[chosen_p].loc[reg_start:reg_end]), color='orange',
+             label='regresjon på historie(kort periode)')
+    plt.plot(long_results.predict(df_tot[chosen_p].loc[:reg_start]), color='cyan',
+             label='regresjon på historie (lang periode)')
+    plt.plot(short_results.predict(df_tot[chosen_p].loc[:reg_start]), color='deeppink',
+             label='modell på historie (kort periode)')
+    plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
+    plt.title('Regresjon for: %s' % fasit_key)
+    plt.legend()
+
+    # Plot just prediction:
+    plt.figure(figsize=(16, 10))
+    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+        plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:], color='k', linewidth=2.0, label='fasit')
+    else:
+        plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:reg_end], color='k', linewidth=2.0, label='fasit')
+    plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
+    plt.title('Tipping for: %s' % fasit_key)
+    plt.legend()
+
+    # Plot input series:
+    plt.figure(figsize=(16, 10))
+    plt.plot(fasit[fasit_key], color='k', linewidth=3.0, label='fasit')
+    for key in chosen_p:
+        if fasit_key[-3:] == '105':
+            sfac = df_tot[fasit_key].mean() / df_tot[key].mean()
+            plt.plot(df_tot[key] * sfac)  # , marker='o')
+        elif fasit_key[-3:] == '132':
+            plt.plot(df_tot[key])  # , marker='o')
+    plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
+    plt.title('Regresjonsserier for: %s' % fasit_key)
+    plt.legend()
+    plt.show()
 
 
 def write_SMG_regresjon(variable, region, df):
