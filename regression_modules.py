@@ -4,8 +4,6 @@ import pytz
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-#plt.interactive(False)
-#from datetime import datetime
 from pandas import Timedelta
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
@@ -15,7 +13,6 @@ import statsmodels.api as sm
 from statkraft.ssa.wrappers import ReadWrapper
 from statkraft.ssa.timeseriesrepository import TimeSeriesRepositorySmg
 from statkraft.ssa.environment import SMG_PROD
-#from statkraft.ssa.timeseries import MetaInfo, TimeStepConstraint, PointInterpretation, Calendar, TimeSeries
 from statkraft.ssa.adapter import ts_from_pandas_series
 
 
@@ -47,8 +44,8 @@ def read_and_setup(variable):
         forecast_time: Time of "true" forecast
 
     Examples:
-        >>> inf_week, MagKap_inf, period, forecast_inf = read_and_setup('tilsig')
-        >>> mag_week, MagKap_mag, period, forecast_mag = read_and_setup('magasin')
+        >> inf_week, MagKap_inf, period, forecast_inf = read_and_setup('tilsig')
+        >> mag_week, MagKap_mag, period, forecast_mag = read_and_setup('magasin')
     """
     period, forecast_time, read_start, last_true_value = get_timeperiods(variable)  
     if variable == 'tilsig':
@@ -91,8 +88,8 @@ def get_timeperiods(variable):
         forecast_time: Time of last forecast
 
     Examples:
-        >>> period, forecast_inf, reg_end_inf, reg_start_inf = get_timeperiods('tilsig')
-        >>> period, forecast_mag, reg_end_mag, reg_start_mag = get_timeperiods('magasin')
+        >> period, forecast_inf, reg_end_inf, reg_start_inf = get_timeperiods('tilsig')
+        >> period, forecast_mag, reg_end_mag, reg_start_mag = get_timeperiods('magasin')
     """
     read_start = '2015.06.08'
     read_end = today + Timedelta(days=7)
@@ -118,8 +115,7 @@ def get_timeperiods(variable):
     if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
         last_true_value = forecast_time
     else:
-        last_true_value = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") 
-                           - Timedelta(days=7)).strftime('%Y.%m.%d')
+        last_true_value = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime('%Y.%m.%d')
     return period, forecast_time, read_start, last_true_value
 
 
@@ -141,8 +137,8 @@ def read_import_SMG(variable, list_dict, list_names, period):
         MagKap_dict: A dictionary of MagKaps for all series.
 
     Examples:
-        >>> df_inf, MagKap_inf = read_import_SMG('tilsig', inf_dict, inf_names, period)
-        >>> df_mag, MagKap_mag = read_import_SMG('magasin',mag_dict, mag_names, period)
+        >> df_inf, MagKap_inf = read_import_SMG('tilsig', inf_dict, inf_names, period)
+        >> df_mag, MagKap_mag = read_import_SMG('magasin',mag_dict, mag_names, period)
     """
     start_time = utctime_now()  # for time taking
     if variable == 'tilsig':
@@ -267,8 +263,7 @@ def make_estimate_while_looping(variable, region, auto_input, reg_period, max_p,
     #########################################################################################
     nb_weeks_tipping = 10  # number of weeks to do tipping back in time
     start_tipping = 7 * nb_weeks_tipping
-    reg_end_new = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(
-        days=start_tipping)).strftime('%Y.%m.%d')  # 6*52
+    reg_end_new = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=start_tipping)).strftime('%Y.%m.%d')  # 6*52
     forecast_time_new = True
     tipping_times = []
     tipping_values = []
@@ -277,11 +272,8 @@ def make_estimate_while_looping(variable, region, auto_input, reg_period, max_p,
     ant_kandidater_error = False
     max_input_error = False
     while forecast_time_new != last_forecast:
-        forecast_time_new = (
-                pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime(
-            '%Y.%m.%d')
-        reg_start = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") - Timedelta(
-            days=reg_period * 7)).strftime('%Y.%m.%d')
+        forecast_time_new = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime('%Y.%m.%d')
+        reg_start = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") - Timedelta(days=reg_period * 7)).strftime('%Y.%m.%d')
         df_tot_new = df_tot[:reg_end_new]
         r2_original = pd.Series()
         for key in df_cleaned:
@@ -397,26 +389,20 @@ def calc_R2(Fasit, Model):
 
 def show_result(show_result_input):
     """This function prints out and plots the results from the regression."""
-    fasit_key, ant_kandidater, max_p, fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, 
-    prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping, input_file = show_result_input
+    fasit_key, ant_kandidater, max_p, fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping, read_start, input_file = show_result_input
     plt.interactive(False)
-    reg_start = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") - Timedelta(days=reg_period * 7)).strftime(
-        '%Y.%m.%d')
+    reg_start = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") - Timedelta(days=reg_period * 7)).strftime('%Y.%m.%d')
     print('\n-----------------------------------------------------------------------')
     print('RESULTATER FOR %s\n' % fasit_key)
     print('Regresjonsperiode fra: %s til: %s.' % (reg_start, reg_end))
     print('Input variablene (reg_period og ant_kandidater) ble hentet fra: ',input_file)
     print('Valgte %.2f kandidater til regresjonen utifra korrelasjon med fasitserien.' % (ant_kandidater))
     print('Valgte så ut de med p-value < %.5f, som var %i stk.' % (max_p, len(long_results.pvalues)))
-    print('Antall stopp av loopen som luker ut for høye p pga minimum antall serier i den lange regresjonen: %i/%i' % (
-    ant_break_long, nb_weeks_tipping))
+    print('Antall stopp av loopen som luker ut for høye p pga minimum antall serier i den lange regresjonen: %i/%i' % (ant_break_long, nb_weeks_tipping))
     print('R2 for regresjonen (kort periode): %.5f' % r2_modelled)
-    print('R2 mellom fasit og tipping: %.5f\n' % (
-        calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])))
-
+    print('R2 mellom fasit og tipping: %.5f\n' % (calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])))
     print('Fasit:\n', fasit[fasit_key][-4:])
     print('\nModdelert/Tippet:\n', tipping_df[-5:])
-
     if fasit_key[-3:] == '105':
         color_tipping = 'blue'
     elif fasit_key[-3:] == '132':
@@ -435,14 +421,11 @@ def show_result_jupyter(show_result_input):
     print('Regresjonsperiode brukt på modellen for siste tipping: %s til: %s, satt til %d uker.' % (reg_start, reg_end, int(reg_period)))
     print('Valgte %d kandidater til regresjonen utifra korrelasjon med fasitserien.'%(int(ant_kandidater)))
     print('Valgte så ut de med p-value < %.5f, som var %i stk.' % (max_p, len(long_results.pvalues)))
-    print('Antall stopp av loopen som luker ut for høye p pga minimum antall serier i den lange regresjonen: %i/%i'
-          %(ant_break_long,nb_weeks_tipping))
+    print('Antall stopp av loopen som luker ut for høye p pga minimum antall serier i den lange regresjonen: %i/%i'%(ant_break_long,nb_weeks_tipping))
     print('R2 for regresjonen (kort periode): %.5f' % r2_modelled)
     print('R2 mellom fasit og tipping: %.5f\n'%(calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])))
-    
     print('Fasit:\n', fasit[fasit_key][-4:])
     print('\nModdelert/Tippet:\n', tipping_df[-5:])
-    
     if fasit_key[-3:] == '105':
         color_tipping = 'blue'
     elif fasit_key[-3:] == '132':
@@ -539,8 +522,7 @@ def write_V_SMG_Regresjon(df_tot, results, chosen_p, fasit_key, r2_modelled, Mag
         for tall, serie, vekt in sorted(zip(range(len(chosen_p)), chosen_p, results.params)):
             serie = "@TRANSFORM(%'{}','WEEK','SUM')".format(serie)
             expression += (str((vekt_serie.format(tall=tall + 1, serie=serie, vekt=vekt))))
-        expression += str(
-            sum_av_vekter.format(alle_vekter='F' + '+F'.join([str(tall + 1) for tall in range(len(chosen_p))])))
+        expression += str(sum_av_vekter.format(alle_vekter='F' + '+F'.join([str(tall + 1) for tall in range(len(chosen_p))])))
         expression += '\n@SET_TS_VALUNIT(##,105)'
         if 'No' in region:
             ts = 'RegresjonTilsigNO' + region[-1] + '.-U9100S0BT0105'
