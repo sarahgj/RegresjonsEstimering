@@ -20,7 +20,6 @@ from statkraft.ssa.adapter import ts_from_pandas_series
 
 
 from import_from_SMG import import_magasiner, import_tilsig
-from default_input_variables import get_default
 
 
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # today/now
