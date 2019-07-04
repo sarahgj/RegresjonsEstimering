@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 import time
 import pytz
@@ -16,11 +17,10 @@ from statkraft.ssa.environment import SMG_PROD
 from statkraft.ssa.adapter import ts_from_pandas_series
 
 
-from import_from_SMG import import_magasiner, import_tilsig
-
+import import_from_SMG
+import import_from_SMG_test
 
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # today/now
-
 
 
 #################################################################################################################
@@ -31,7 +31,7 @@ today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M",
 
 
 
-def read_and_setup(variable):
+def read_and_setup(variable, test=False):
     """This function is the head function for reading and seting up the series used for the regression
 
     Args:
@@ -47,19 +47,26 @@ def read_and_setup(variable):
         >> inf_week, MagKap_inf, period, forecast_inf = read_and_setup('tilsig')
         >> mag_week, MagKap_mag, period, forecast_mag = read_and_setup('magasin')
     """
-    period, forecast_time, read_start, last_true_value = get_timeperiods(variable)  
+
+    period, forecast_time, read_start, last_true_value = get_timeperiods(variable, test)
     if variable == 'tilsig':
         print('---------------------------------------------------------------')
         print('                        TILSIG                                 ')
         print('---------------------------------------------------------------')
-        list_dict, list_names_dict = import_tilsig()
+        if test:
+            list_dict, list_names_dict = import_from_SMG_test.import_tilsig()
+        else:
+            list_dict, list_names_dict = import_from_SMG.import_tilsig()
         df_all, MagKap_list = read_import_SMG(variable, list_dict, list_names_dict, period)
         df_week = index2week(df_all, variable).loc[:forecast_time]
     elif variable == 'magasin':
         print('---------------------------------------------------------------')
         print('                        MAGASIN                                ')
         print('---------------------------------------------------------------')
-        list_dict, list_names_dict = import_magasiner()
+        if test:
+            list_dict, list_names_dict = import_from_SMG_test.import_magasiner()
+        else:
+            list_dict, list_names_dict = import_from_SMG.import_magasiner()
         df_all, MagKap_list = read_import_SMG(variable, list_dict, list_names_dict, period)
         corrected_mag = GWh2percentage(df_all, MagKap_list)
         df_week = index2week(corrected_mag, variable).loc[:forecast_time]
@@ -76,7 +83,7 @@ def read_and_setup(variable):
     return df_week, MagKap_list, period, forecast_time, read_start
 
 
-def get_timeperiods(variable):
+def get_timeperiods(variable, test=False):
     """This function finds what day it is today and chooses from that information the end of the regression
     and the time period of which the series should be read. It is used for read_and_setup().
 
@@ -91,6 +98,12 @@ def get_timeperiods(variable):
         >> period, forecast_inf, reg_end_inf, reg_start_inf = get_timeperiods('tilsig')
         >> period, forecast_mag, reg_end_mag, reg_start_mag = get_timeperiods('magasin')
     """
+    if test == 'mandag':
+        today = pd.to_datetime("2019.06.24 11:00", format="%Y.%m.%d %H:%M", errors='ignore')
+    elif test == 'onsdag':
+        today = pd.to_datetime("2019.06.27 11:00", format="%Y.%m.%d %H:%M", errors='ignore')
+    else:
+        today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # today/now
     read_start = '2015.06.08'
     read_end = today + Timedelta(days=7)
     # The fasit value appears on wednesday 14 o'clock limiting the end time of the regression.
@@ -119,6 +132,55 @@ def get_timeperiods(variable):
     return period, forecast_time, read_start, last_true_value
 
 
+
+def GWh2percentage(df, MagKap):
+    """This function converts from GWh to percentage magasinfylling.
+    Args:
+        df: Dataframe with all series that are intended for the magasin regression.
+        MagKap: List of magasine capacity for each magasinfylling-series (=0 for series that's already in percentage).
+
+    Returns:
+        df: df with all series en percentage magasinfylling
+    """
+    for key in MagKap:
+        if MagKap[key] != 0:
+            df[key] = (100 * df[key] / MagKap[key])
+    return df
+
+
+def index2week(df, variable):
+    """This function changes the index of a dataframe to weekly values. This is done differently for the
+    magasin input series than the tilsig input series.
+
+    df : DataFrame object which contain
+
+    variable : byttes med variable str
+
+    """
+    if variable == 'magasin':
+        diff = df.index[-1] - df.index[0]  # number of days in df
+        weeks = math.floor(diff.days / 7)  # number of weeks in df
+        for date in df.index:
+            if date.weekday() == 0 and date.hour == 0:
+                start = date
+                break
+        datoer = [start + Timedelta(days=7 * i) for i in range(weeks + 1)]
+        df_week = df.loc[datoer]
+    elif variable == 'tilsig':
+        df_week = pd.DataFrame()
+        df_week = df.resample('W', label='left', closed='right').sum()
+        df_week = df_week.shift(1, freq='D')
+    return df_week
+
+
+def deletingNaNs(df):
+    """This function drops columns of a DataFrame (df) that has one or more NaNs."""
+    df_old = df.copy()
+    df.dropna(axis=1, how='any', inplace=True)
+    for key in df_old:
+        if str(key) not in df:
+            print('Deleted ', key)
+    return df
 
 
 def read_import_SMG(variable, list_dict, list_names, period):
@@ -209,9 +271,9 @@ def get_input_variables_from_file(variable, region, backup=False):
 
 
 def write_input_variables_to_file(region,variable,max_p, ant_kandidater, reg_period):
-    input_file = 'input_variables_from_tuning.txt'
+    output_file = 'input_variables_from_tuning.txt'
     string2find = '{:3} {:7}'.format(region,variable)
-    with open(input_file,'r') as file:
+    with open(output_file,'r') as file:
         data = file.readlines()
         i = 0
         for line in data:
@@ -221,7 +283,7 @@ def write_input_variables_to_file(region,variable,max_p, ant_kandidater, reg_per
             i +=1
         now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
     data[len(data)-1] = '#Sist oppdatert ved autotuning: {}'.format(now)
-    with open(input_file, 'w') as file:
+    with open(output_file, 'w') as file:
         file.writelines(data)
 
 
@@ -323,55 +385,6 @@ def make_estimate_while_looping(variable, region, auto_input, reg_period, max_p,
 
 
 
-
-def GWh2percentage(df, MagKap):
-    """This function converts from GWh to percentage magasinfylling.
-    Args:
-        df: Dataframe with all series that are intended for the magasin regression.
-        MagKap: List of magasine capacity for each magasinfylling-series (=0 for series that's already in percentage).
-
-    Returns:
-        df: df with all series en percentage magasinfylling
-    """
-    for key in MagKap:
-        if MagKap[key] != 0:
-            df[key] = (100 * df[key] / MagKap[key])
-    return df
-
-
-def index2week(df, variable):
-    """This function changes the index of a dataframe to weekly values. This is done differently for the
-    magasin input series than the tilsig input series.
-
-    df : DataFrame object which contain
-
-    variable : byttes med variable str
-
-    """
-    if variable == 'magasin':
-        diff = df.index[-1] - df.index[0]  # number of days in df
-        weeks = math.floor(diff.days / 7)  # number of weeks in df
-        for date in df.index:
-            if date.weekday() == 0 and date.hour == 0:
-                start = date
-                break
-        datoer = [start + Timedelta(days=7 * i) for i in range(weeks + 1)]
-        df_week = df.loc[datoer]
-    elif variable == 'tilsig':
-        df_week = pd.DataFrame()
-        df_week = df.resample('W', label='left', closed='right').sum()
-        df_week = df_week.shift(1, freq='D')
-    return df_week
-
-
-def deletingNaNs(df):
-    """This function drops columns of a DataFrame (df) that has one or more NaNs."""
-    df_old = df.copy()
-    df.dropna(axis=1, how='any', inplace=True)
-    for key in df_old:
-        if str(key) not in df:
-            print('Deleted ', key)
-    return df
 
 
 def calc_R2(Fasit, Model):
