@@ -330,9 +330,7 @@ def make_estimate_while_looping(variable, region, auto_input, reg_period, max_p,
     tipping_times = []
     tipping_values = []
     ant_break_long = 0
-    ant_break_short = 0
     ant_kandidater_error = False
-    max_input_error = False
     while forecast_time_new != last_forecast:
         forecast_time_new = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime('%Y.%m.%d')
         reg_start = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") - Timedelta(days=reg_period * 7)).strftime('%Y.%m.%d')
@@ -585,6 +583,7 @@ def make_estimate(variable, region, auto_input, fasit_key, reg_period, max_p, an
     df_week, MagKap, period, forecast_time, read_start = auto_input
     reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime('%Y.%m.%d')
     fasit = period.read([fasit_key]).loc[:reg_end]
+    print(fasit[fasit_key][-10:-1])
 
     if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
         last_forecast = forecast_time
