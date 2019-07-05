@@ -1,20 +1,20 @@
 #region variabel max_p ant_kandidater reg_period
 NO1 tilsig  0.025  22  29 
-NO1 magasin 0.025 112 200 
+NO1 magasin 0.025 114 154
 NO2 tilsig  0.025  23  81 
-NO2 magasin 0.025  69 121 
+NO2 magasin 0.025  68 120
 NO3 tilsig  0.025 190 108
-NO3 magasin 0.025 129  47
+NO3 magasin 0.025  98  45
 NO4 tilsig  0.025 164 190
-NO4 magasin 0.025  96 127
+NO4 magasin 0.025  95  91
 NO5 tilsig  0.025 110  84 
 NO5 magasin 0.025 133 108 
-SE1 tilsig  0.025 195  90
-SE1 magasin 0.025 104 149
+SE1 tilsig  0.025 165 110
+SE1 magasin 0.025 120 205
 SE2 tilsig  0.025  36 118
 SE2 magasin 0.025  70  42
 SE3 tilsig  0.025 174 105
 SE3 magasin 0.025 119 140
 SE4 tilsig  0.025 181 203
 SE4 magasin 0.025  97 153
-#Sist oppdatert ved autotuning: 2019-07-02 12:24:00
+#Sist oppdatert ved autotuning: 2019-07-05 11:42:00
