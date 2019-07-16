@@ -319,7 +319,7 @@ def import_tilsig():
         'Sysima_5192U': ['/HBV/LTM4-Sysima-050.015/LTM/UPDAT/Q_OBSE'],
         'Langsim_5190U': ['/HBV/LTM4-Langsim-050.051/LTM/UPDAT/Q_OBSE']}
 
-    divNO = {  # div Norge
+    NVE1 = {  # div Norge
         'NVE-Aabjoera': ['/NVE.-Aabjoera.kr.st-D1050A3B1120R012.131'],
         'NVE-Aamfoss': ['/NVE.-Aamfoss.......-D1050A3B0223R019.029'],
         'NVE-Adamsfjordfoss': ['/NVE.-Adamsfjordfoss-D1050A3B0846R229.001'],
@@ -342,7 +342,9 @@ def import_tilsig():
         'NVE-Faukstad': ['/NVE.-Faukstad......-D1054A3KI0108'],
         'NVE-Fetvatn': ['/NVE.-Fetvatn.......-D1054A3KI0108'],
         'NVE-Feios': ['/NVE.-Feios.........-D1050A3B1724R071.005'],
-        'NVE-Femundsenden': ['/NVE.-Femundsenden..-D1054A3KI0108'],
+        'NVE-Femundsenden': ['/NVE.-Femundsenden..-D1054A3KI0108']}
+
+    NVE2 = {  # div Norge
         'NVE-Fredriksvatn': ['/NVE.-Fredriksvatn..-D1050A3B0916R002.223'],
         'NVE-Foennebufjord': ['/NVE.-Foennebufjord.-D1050A3B0476R015.019'],
         'NVE-Fura': ['/NVE.-Fura..........-D1054A3KI0108'],
@@ -361,7 +363,9 @@ def import_tilsig():
         'NVE-Haukedalsv-nd': ['/NVE.-Haukedalsv.nd.-D1054A3KI0108'],
         'NVE-Horgheim': ['/NVE.-Horgheim......-D1050A3B0636R103.004'],
         'NVE-Hornindalsvatn': ['/NVE.-Hornindalsvatn-D1050A3B0623R089.001'],
-        'NVE-Hovefoss': ['/NVE.-Hovefoss......-D1054A3KI0108'],
+        'NVE-Hovefoss': ['/NVE.-Hovefoss......-D1054A3KI0108']}
+
+    NVE3 = {  # div Norge
         'NVE-Høgfoss': ['/NVE.-Høgfoss.......-D1054A3KI0108'],
         'NVE-Hølervatn': ['/NVE.-Hølervatn.....-D1054A3KI0108'],
         'NVE-Håkodalselv': ['/NVE.-Håkodalselv...-D1054A3KI0108'],
@@ -384,7 +388,9 @@ def import_tilsig():
         'NVE-Lendingsosen': ['/NVE.-Lendingsosen..-D1050A3B2933R155.027'],
         'NVE-Lenglingen': ['/NVE.-Lenglingen....-D1054A3KI0108'],
         'NVE-Lesjaverk': ['/NVE.-Lesjaverk.....-D1054A3KI0108'],
-        'NVE-Li-bru': ['/NVE.-Li.bru........-D1054A3KI0108'],
+        'NVE-Li-bru': ['/NVE.-Li.bru........-D1054A3KI0108']}
+
+    NVE4 = {  # div Norge
         'NVE-Lillebudal-bru': ['/NVE.-Lillebudal.bru-D1054A3KI0108'],
         'NVE-Limingen': ['/NVE.-Limingen......-D1050A3B0686Q307.002'],
         'NVE-Lombola': ['/NVE.-Lombola.......-D1054A3KI0108'],
@@ -408,7 +414,9 @@ def import_tilsig():
         'NVE-Oksfjordvatn': ['/NVE.-Oksfjordvatn..-D1054A3KI0108'],
         'NVE-Polmak-nye': ['/NVE.-Polmak.nye....-D1054A3KI0108'],
         'NVE-Refsvatn': ['/NVE.-Refsvatn......-D1054A3KI0108'],
-        'NVE-Risefoss': ['/NVE.-Risefoss......-D1054A3KI0108'],
+        'NVE-Risefoss': ['/NVE.-Risefoss......-D1054A3KI0108']}
+
+    NVE5 = {  # div Norge
         'NVE-Risevatn': ['/NVE.-Risevatn......-D1050A3B0866R086.001'],
         'NVE-Roedsjoe': ['/NVE.-Roedsjoe......-D1050A3B0680R133.002'],
         'NVE-Rosten': ['/NVE.-Rosten........-D1050A3B0411R002.614'],
@@ -426,7 +434,9 @@ def import_tilsig():
         'NVE-Soerelv-Bru': ['/NVE.-Soerelv.Bru...-D1050A3B0740R173.003'],
         'NVE-Sogne': ['/NVE.-Sogne.........-D1054A3KI0108'],
         'NVE-Solbergfoss': ['/NVE.-Solbergfoss...-D1050A3B1960R002.605'],
-        'NVE-Soya': ['/NVE.-Soya..........-D1054A3KI0108'],
+        'NVE-Soya': ['/NVE.-Soya..........-D1054A3KI0108']}
+
+    NVE6 = {  # div Norge
         'NVE-Stabburselv': ['/NVE.-Stabburselv...-D1050A3B0769R223.001'],
         'NVE-Stai': ['/NVE.-Stai..........-D1050A3B0386R002.117'],
         'NVE-Stengelsen': ['/NVE.-Stengelsen....-D1050A3B0764R212.002'],
@@ -441,7 +451,9 @@ def import_tilsig():
         'NVE-Sørra': ['/NVE.-Sørra.........-D1054A3KI0108'],
         'NVE-Søya': ['/NVE.-Søya..........-D1050A3B2059R111.009'],
         'NVE-Talgoeyfoss': ['/NVE.-Talgoeyfoss...-D1050A3B0973R111.005'],
-        'NVE-Trangen': ['/NVE.-Trangen.......-D1054A3KI0108'],
+        'NVE-Trangen': ['/NVE.-Trangen.......-D1054A3KI0108']}
+
+    NVE7 = {  # div Norge
         'NVE-Unsetåa': ['/NVE.-Unsetåa.......-D1054A3KI0108'],
         'NVE-Ustedalsvatn': ['/NVE.-Ustedalsvatn..-D1050A3B0455R012.095'],
         'NVE-Valle': ['/NVE.-Valle.........-D1050A3B0536R021.022'],
@@ -902,8 +914,8 @@ def import_tilsig():
         'Vikf-Refsdal': ['/Vikf-Refsdal.......-U9100S3BT0104']}
 
     return [NO1, NO2, NO3, NO4, NO5, SE1, SE2, SE3, SE4, kjente, ukjente, tipping, MagEndr1, MagEndr2, MagEndr3,
-            MagEndr4, MagEndr5, KrfoDel1, KrfoDel2, KrfoDel3, KrfoDel4, KrfoDel5, KrfoDel6], \
+            MagEndr4, MagEndr5, KrfoDel1, KrfoDel2, KrfoDel3, KrfoDel4, KrfoDel5, KrfoDel6, NVE1, NVE2, NVE3, NVE4, NVE5, NVE6, NVE7], \
            ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4',
             'Tilsig kjente pr prisområde', 'Tilsig ukjente pr prisområde', 'BesteEstimat, Q_obse, Q_NFB',
             'Tilsig basert på magasinendring pluss Kpp-prod, Del1', 'Del2', 'Del3', 'Del4', 'Del5',
-            'Tilsiget pr kraftverksområde: Del1', 'Del2', 'Del3', 'Del4', 'Del5', 'Del6']
+            'Tilsiget pr kraftverksområde: Del1', 'Del2', 'Del3', 'Del4', 'Del5', 'Del6', 'NVE1', 'NVE2', 'NVE3', 'NVE4', 'NVE5', 'NVE6', 'NVE7']

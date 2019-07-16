@@ -20,7 +20,7 @@ from statkraft.ssa.adapter import ts_from_pandas_series
 import import_from_SMG
 import import_from_SMG_test
 
-today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # today/now
+today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now
 
 
 #################################################################################################################
@@ -47,7 +47,7 @@ def read_and_setup(variable, test=False):
         >> inf_week, MagKap_inf, period, forecast_inf = read_and_setup('tilsig')
         >> mag_week, MagKap_mag, period, forecast_mag = read_and_setup('magasin')
     """
-
+    # start_ time.time()
     period, forecast_time, read_start, last_true_value = get_timeperiods(variable, test)
     if variable == 'tilsig':
         print('---------------------------------------------------------------')
@@ -70,6 +70,9 @@ def read_and_setup(variable, test=False):
         df_all, MagKap_list = read_import_SMG(variable, list_dict, list_names_dict, period)
         corrected_mag = GWh2percentage(df_all, MagKap_list)
         df_week = index2week(corrected_mag, variable).loc[:forecast_time]
+    else:
+        print('Input variable does not match the "tilsig" and "magasin"')
+        sys.exit(1)
     # Printing information:
     print('Mandag det tippes for (siste mandag ved tuning): ', forecast_time)
     first_true = True
@@ -80,6 +83,8 @@ def read_and_setup(variable, test=False):
             print(df_week[key].loc[last_true_value], key)
             first_true = False
     print('\n\n')
+    # end_time time.time()
+    #print('Time to read_and_setup: ', end_time - start_time)
     return df_week, MagKap_list, period, forecast_time, read_start
 
 
@@ -98,6 +103,7 @@ def get_timeperiods(variable, test=False):
         >> period, forecast_inf, reg_end_inf, reg_start_inf = get_timeperiods('tilsig')
         >> period, forecast_mag, reg_end_mag, reg_start_mag = get_timeperiods('magasin')
     """
+    # start_ time.time()
     if test == 'mandag':
         today = pd.to_datetime("2019.06.24 11:00", format="%Y.%m.%d %H:%M", errors='ignore')
     elif test == 'onsdag':
@@ -129,6 +135,8 @@ def get_timeperiods(variable, test=False):
         last_true_value = forecast_time
     else:
         last_true_value = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime('%Y.%m.%d')
+    # end_time time.time()
+    #print('Time to run get_timeperiods: ', end_time - start_time)
     return period, forecast_time, read_start, last_true_value
 
 
@@ -142,9 +150,12 @@ def GWh2percentage(df, MagKap):
     Returns:
         df: df with all series en percentage magasinfylling
     """
+    # start_ time.time()
     for key in MagKap:
         if MagKap[key] != 0:
             df[key] = (100 * df[key] / MagKap[key])
+    # end_time time.time()
+    #print('Time to run GWh2percentage: ', end_time - start_time)
     return df
 
 
@@ -157,6 +168,7 @@ def index2week(df, variable):
     variable : byttes med variable str
 
     """
+    # start_ time.time()
     if variable == 'magasin':
         diff = df.index[-1] - df.index[0]  # number of days in df
         weeks = math.floor(diff.days / 7)  # number of weeks in df
@@ -170,16 +182,21 @@ def index2week(df, variable):
         df_week = pd.DataFrame()
         df_week = df.resample('W', label='left', closed='right').sum()
         df_week = df_week.shift(1, freq='D')
+    # end_time time.time()
+    #print('Time to run index2week: ', end_time - start_time)
     return df_week
 
 
 def deletingNaNs(df):
     """This function drops columns of a DataFrame (df) that has one or more NaNs."""
+    # start_ time.time()
     df_old = df.copy()
     df.dropna(axis=1, how='any', inplace=True)
     for key in df_old:
         if str(key) not in df:
             print('Deleted ', key)
+    # end_time time.time()
+    #print('Time to run deletingNaNs: ', end_time - start_time)
     return df
 
 
@@ -202,7 +219,7 @@ def read_import_SMG(variable, list_dict, list_names, period):
         >> df_inf, MagKap_inf = read_import_SMG('tilsig', inf_dict, inf_names, period)
         >> df_mag, MagKap_mag = read_import_SMG('magasin',mag_dict, mag_names, period)
     """
-    start_time = utctime_now()  # for time taking
+    # start_ utctime_now()  # for time taking
     if variable == 'tilsig':
         print('Forventet innlesingstid er +/-180 sekunder.')
     elif variable == 'magasin':
@@ -230,7 +247,7 @@ def read_import_SMG(variable, list_dict, list_names, period):
         df_new, MagKap = read_region(series, dict_name, period)
         MagKap_dict.update(MagKap)
         df = pd.concat([df, df_new], axis=1, sort=False)
-    print('\nInnlesning for %s tok totalt %.0f sekunder. \n' % (variable, utctime_now() - start_time))
+    #print('\nInnlesning for %s tok totalt %.0f sekunder. \n' % (variable, utctime_now() - start_time))
     return df, MagKap_dict
 
 
@@ -243,18 +260,25 @@ def read_import_SMG(variable, list_dict, list_names, period):
 
 
 def make_fasit_key(variable, region):
+    # start_ time.time()
     if ('N' in region) and (variable == 'tilsig'):
         fasit_key = '/Norg-No' + region[-1] + '.Fasit.....-U9100S0BT0105'
     elif ('S' in region) and (variable == 'tilsig'):
         fasit_key = '/Sver-Se' + region[-1] + '.Fasit.....-U9100S0BT0105'
-    if ('N' in region) and (variable == 'magasin'):
+    elif ('N' in region) and (variable == 'magasin'):
         fasit_key = '/Norg-NO' + region[-1] + '.Fasit.....-U9104A5R-0132'
     elif ('S' in region) and (variable == 'magasin'):
         fasit_key = '/Sver-SE' + region[-1] + '.Fasit.....-U9104A5R-0132'
+    else:
+        print('Could not fasit_key')
+        sys-exit(1)
+    # end_time time.time()
+    #print('Time to run make_fasit_key: ',end_time-start_time)
     return fasit_key
 
 
 def get_input_variables_from_file(variable, region, backup=False):
+    # start_ time.time()
     if backup:
         input_file = 'input_variables_backup.txt'
     else:
@@ -266,11 +290,14 @@ def get_input_variables_from_file(variable, region, backup=False):
                 max_p = float(line[12:17])
                 ant_kandidater = int(line[18:21]) 
                 reg_period =int(line[22:25])
+    # end_time time.time()
+    #print('Time to run get_input_variables_from_file: ',end_time-start_time)
     return reg_period, max_p, ant_kandidater, input_file
 
 
 
 def write_input_variables_to_file(region,variable,max_p, ant_kandidater, reg_period):
+    # start_ time.time()
     output_file = 'input_variables_from_tuning.txt'
     string2find = '{:3} {:7}'.format(region,variable)
     with open(output_file,'r') as file:
@@ -278,17 +305,19 @@ def write_input_variables_to_file(region,variable,max_p, ant_kandidater, reg_per
         i = 0
         for line in data:
             if line.startswith(string2find):
-                data[i] = '{:10s} {:5.3f} {:3d} {:3d}\n'.format(string2find, max_p, int(ant_kandidater), int(reg_period))
+                now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
+                data[i] = '{:10s} {:5.3f} {:3d} {:3d} {}\n'.format(string2find, max_p, int(ant_kandidater), int(reg_period), now)
                 break
             i +=1
-        now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
-    data[len(data)-1] = '#Sist oppdatert ved autotuning: {}'.format(now)
     with open(output_file, 'w') as file:
         file.writelines(data)
+    # end_time time.time()
+    #print('Time to run write_input_variables_to_file: ',end_time-start_time)
 
 
 
 def make_estimate_and_write(variable, region, auto_input, backup=False):
+    # start_ time.time()
     fasit_key = make_fasit_key(variable, region)
     reg_period, max_p, ant_kandidater, input_file = get_input_variables_from_file(variable, region, backup)
     df_week, MagKap, period, forecast_time, read_start = auto_input
@@ -299,6 +328,8 @@ def make_estimate_and_write(variable, region, auto_input, backup=False):
     # write to SMG, virtual:
     write_V_SMG_Regresjon(df_tot, short_results, chosen_p, fasit_key, r2_modelled, MagKap)
     show_results_input = [fasit_key, ant_kandidater, max_p, fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping, read_start, input_file]
+    # end_time time.time()
+    #print('Time to run make_estimate_and_write: ',end_time-start_time)
     return show_results_input
 
 
@@ -309,6 +340,7 @@ def make_estimate_and_write(variable, region, auto_input, backup=False):
 #################################################################################################################
 
 def make_estimate_while_looping(variable, region, auto_input, reg_period, max_p, ant_kandidater):
+    # start_ time.time()
     #reg_period, max_p, ant_kandidater
     fasit_key = make_fasit_key(variable, region)
     df_week, MagKap, period, forecast_time, read_start = auto_input 
@@ -331,31 +363,41 @@ def make_estimate_while_looping(variable, region, auto_input, reg_period, max_p,
     tipping_values = []
     ant_break_long = 0
     ant_kandidater_error = False
+
+    start_r2_time = time.time()
+    r2_original = pd.Series()
+    for key in df_cleaned:
+        if variable == 'tilsig':
+            if df_tot[key].mean() == 0:
+                print('passed for ', key, 'mean = 0')
+                pass
+            else:
+                scalefac = df_tot[fasit_key].mean() / df_tot[key].mean()
+                r2_original[key] = calc_R2(df_tot[fasit_key], df_tot[key] * scalefac)
+        elif variable == 'magasin':
+            r2_original[key] = calc_R2(df_tot[fasit_key], df_tot[key])
+        else:
+            print('wrong variable')
+            sys.exit(1)
+
+    # Chosing the chosen number of best r2 keys
+    sorted_r2 = r2_original.sort_values(ascending=False)
+    max_input_series = 196
+    if ant_kandidater > max_input_series:
+        ant_kandidater_error = '\nFeilmelding: Ønsket antall kandidater overskrider maks (%i), passed.' % maks
+        pass
+        chosen_r2 = list(sorted_r2.axes[0][:maks])
+    else:
+        chosen_r2 = list(sorted_r2.axes[0][:ant_kandidater])
+
+    end_r2_time = time.time()
+    #print('Time to get chosen_r2 from df_cleaned: ', end_r2_time - start_r2_time)
+
     while forecast_time_new != last_forecast:
         forecast_time_new = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime('%Y.%m.%d')
         reg_start = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") - Timedelta(days=reg_period * 7)).strftime('%Y.%m.%d')
         df_tot_new = df_tot[:reg_end_new]
-        r2_original = pd.Series()
-        for key in df_cleaned:
-            if variable == 'tilsig':
-                if df_tot_new[key].mean() == 0:
-                    print('passed for ', key, 'mean = 0')
-                    pass
-                else:
-                    scalefac = df_tot_new[fasit_key].mean() / df_tot_new[key].mean()
-                    r2_original[key] = calc_R2(df_tot_new[fasit_key], df_tot_new[key] * scalefac)
-            elif variable == 'magasin':
-                r2_original[key] = calc_R2(df_tot_new[fasit_key], df_tot_new[key])
 
-        # Chosing the chosen number of best r2 keys
-        sorted_r2 = r2_original.sort_values(ascending=False)
-        max_input_series = 196
-        if ant_kandidater > max_input_series:
-            ant_kandidater_error = '\nFeilmelding: Ønsket antall kandidater overskrider maks (%i), passed.' % maks
-            pass
-            chosen_r2 = list(sorted_r2.axes[0][:maks])
-        else:
-            chosen_r2 = list(sorted_r2.axes[0][:ant_kandidater])
         # Regresjon
         long_results, chosen_p, ant_break = regression(df_tot_new, fasit_key, chosen_r2, max_p)
         ant_break_long += ant_break
@@ -379,6 +421,8 @@ def make_estimate_while_looping(variable, region, auto_input, reg_period, max_p,
     r_samlet = (r2_modelled * 0.5 + r2_tippet * 0.5)
     ant_serier = len(chosen_p) if len(chosen_p) >= 6 else 6
     print(ant_kandidater, ant_serier, r2_modelled, r2_tippet, r_samlet, reg_period, max_p)
+    # end_time time.time()
+    #print('Time to run make_estimate_while_looping: ',end_time-start_time)
     return ant_kandidater, ant_serier, r2_modelled, r2_tippet, r_samlet, reg_period, max_p
 
 
@@ -399,6 +443,7 @@ def calc_R2(Fasit, Model):
 
 
 def show_result(show_result_input):
+    # start_ time.time()
     """This function prints out and plots the results from the regression."""
     fasit_key, ant_kandidater, max_p, fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping, read_start, input_file = show_result_input
     plt.interactive(False)
@@ -418,6 +463,8 @@ def show_result(show_result_input):
         color_tipping = 'blue'
     elif fasit_key[-3:] == '132':
         color_tipping = 'lightblue'
+    # end_time time.time()
+    #print('Time to run show_result: ',end_time-start_time)
 
 
 def show_result_jupyter(show_result_input):
@@ -481,6 +528,7 @@ def show_result_jupyter(show_result_input):
 
 
 def write_SMG_regresjon(variable, region, df):
+    # start_time = time.time()
     """This function writes pandas series (df) to smg series (ts) chosen according to the chosen region."""
     smg = TimeSeriesRepositorySmg(SMG_PROD)
 
@@ -502,9 +550,12 @@ def write_SMG_regresjon(variable, region, df):
 
     # writing
     result = smg.write([time_series_to_write])
+    # start_ time.time()
+    #print('Time to run write_SMG_regresjon: ',end_time-start_time)
 
 
 def write_V_SMG_Regresjon(df_tot, results, chosen_p, fasit_key, r2_modelled, MagKap_mag=False):
+    start_time = time.time()
     now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
     expression = str('! Sist oppdatert {}\n!R2 med {} serier: {}\n'.format(now, len(chosen_p), r2_modelled))
     vekt_serie = "F{tall}={serie}*{vekt}\n"
@@ -547,6 +598,9 @@ def write_V_SMG_Regresjon(df_tot, results, chosen_p, fasit_key, r2_modelled, Mag
     #print(expression)
     #print('-----------------------------------------------------------------------')
     smg.update_virtual({info[0]: expression})
+    # end_time time.time()
+    #print('Time to run write_V_SMG_Regresjon: ',end_time-start_time)
+
 
 
 def regression(df_tot, fasit_key, chosen, max_p):
@@ -563,6 +617,7 @@ def regression(df_tot, fasit_key, chosen, max_p):
         results: The results of the final regression.
         chosen_p: A list of keys of the final chosen set of timeseries for the regression model.
         ant_break: 1 if the loop picking out p-values stopped because of minimum number of series limit."""
+    # start_time = time.time()
     # First regression
     first_model = sm.OLS(df_tot[fasit_key], df_tot[chosen])
     # Initializing loop
@@ -576,10 +631,13 @@ def regression(df_tot, fasit_key, chosen, max_p):
             break
         chosen_p.remove(results.pvalues.idxmax())  # updating the chosen list
         results = sm.OLS(df_tot[fasit_key], df_tot[chosen_p]).fit()  # regression
+    # end_time time.time()
+    #print('Time to run regression: ',end_time-start_time)
     return results, chosen_p, ant_break
 
 
 def make_estimate(variable, region, auto_input, fasit_key, reg_period, max_p, ant_kandidater):
+    # start_ time.time()
     df_week, MagKap, period, forecast_time, read_start = auto_input
     reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime('%Y.%m.%d')
     fasit = period.read([fasit_key]).loc[:reg_end]
@@ -652,7 +710,8 @@ def make_estimate(variable, region, auto_input, fasit_key, reg_period, max_p, an
     tipping_df = pd.Series(tipping_values, index=tipping_times)
     if ant_kandidater_error:
         print(ant_kandidater_error)
-
+    # end_time time.time()
+    #print('Time to run make_estimate: ',end_time-start_time)
     return fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, reg_end, reg_period, ant_break_long, nb_weeks_tipping, read_start
 
 

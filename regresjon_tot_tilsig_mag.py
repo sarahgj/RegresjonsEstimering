@@ -32,7 +32,7 @@ try:
 
     for region in reg:
         for variable in var:
-            show_result_input = make_estimate_and_write(variable, region, auto_input[variable], backup=True)
+            show_result_input = make_estimate_and_write(variable, region, auto_input[variable], backup=False)
             show_result(show_result_input)
     logging.info('\nThe script ran successfully and used a total of %.0f minutes\n' %((utctime_now() - start_time)/60))
 

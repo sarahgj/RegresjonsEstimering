@@ -11,6 +11,7 @@ columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samle
 max_p = 0.025
 reg_period = 208  # Finn hele perioden
 
+#['magasin', 'tilsig']
 for variable in ['magasin', 'tilsig']:
 
     if variable == 'tilsig':
@@ -39,8 +40,9 @@ for variable in ['magasin', 'tilsig']:
     for region in ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']:
         start_time_loop = utctime_now()
         # Første loop: Tuner antall kandidater som gir best R2 samlet
+        start_time = time.time()
         df_ant_kandidater = pd.DataFrame(columns=columns)
-        for antall in range(min_kandidater, max_kandidater+1, 1):
+        for antall in range(min_kandidater, max_kandidater+1, 2):
             output = make_estimate_while_looping(variable, region, auto_input[variable], reg_period, max_p, antall)
             df_ant_kandidater = df_ant_kandidater.append(
                 {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
@@ -48,10 +50,13 @@ for variable in ['magasin', 'tilsig']:
         idx_max = df_ant_kandidater.r2_samlet.idxmax(skipna=True)
         ant_kandidater_beste = int(df_ant_kandidater.ant_kandidater.values[idx_max])
         print('Beste ant_kandidater loop 1: ', ant_kandidater_beste)
+        end_time = time.time()
+        print('Time to run loop 1: ', end_time - start_time)
 
         # Andre loop: tuner lengden på den korte regresjonen som gir best R2 samlet
+        start_time = time.time()
         df_reg_period = pd.DataFrame(columns=columns)
-        for period in range(min_weeks, max_weeks+1, 1):
+        for period in range(min_weeks, max_weeks+1, 2):
             period = int(period)
             output = make_estimate_while_looping(variable, region, auto_input[variable], period, max_p, ant_kandidater_beste)
             df_reg_period = df_reg_period.append(
@@ -60,6 +65,8 @@ for variable in ['magasin', 'tilsig']:
         idx_max = df_reg_period.r2_samlet.idxmax(skipna=True)
         reg_period_beste = int(df_reg_period.reg_period.values[idx_max])
         print('Beste reg_period loop 2: ', reg_period_beste)
+        end_time = time.time()
+        print('Time to run loop 2: ', end_time - start_time)
 
         # Tredje loop: tuner valget av max p-verdi som gir best R2 samlet
         # df_max_p = pd.DataFrame(columns=columns)
