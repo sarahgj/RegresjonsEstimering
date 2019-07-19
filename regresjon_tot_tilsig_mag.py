@@ -27,13 +27,29 @@ try:
     auto_input['tilsig'] = read_and_setup('tilsig')
     auto_input['magasin'] = read_and_setup('magasin')
 
-    var = ['magasin', 'tilsig']
-    reg = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']
-
-    for region in reg:
-        for variable in var:
-            show_result_input = make_estimate_and_write(variable, region, auto_input[variable], backup=False)
-            show_result(show_result_input)
+    for variable in ['magasin', 'tilsig']:
+        df_week, MagKap, period, forecast_time, read_start = auto_input[variable]
+        reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
+            '%Y.%m.%d')
+        if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+            last_forecast = forecast_time
+        else:
+            last_forecast = reg_end
+        df_cleaned = deletingNaNs(df_week.loc[:last_forecast])
+        for region in ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']:
+            start_time_loop = utctime_now()
+            fasit, fasit_key = make_fasit(variable, region, reg_end, period)
+            sorted_r2 = get_R2_sorted(variable, df_cleaned, fasit, fasit_key)
+            short_period, max_p, ant_kandidater, input_file = get_input_variables_from_file(variable, region, backup=False)
+            chosen_r2 = sorted_r2[:ant_kandidater]
+            input1 = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p, chosen_r2, loop=False)
+            fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping = input1
+            input2 = fasit_key, ant_kandidater, max_p, reg_end, read_start
+            # write to SMG:
+            write_SMG_regresjon(variable, region, tipping_df)
+            # write to SMG, virtual:
+            write_V_SMG_Regresjon(df_tot, short_results, chosen_p, fasit_key, r2_modelled, MagKap)
+            show_result(input1, input2)
     logging.info('\nThe script ran successfully and used a total of %.0f minutes\n' %((utctime_now() - start_time)/60))
 
 
