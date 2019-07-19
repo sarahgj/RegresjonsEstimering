@@ -1,8 +1,8 @@
 #region variabel max_p ant_kandidater reg_period date time (of update)
 NO1 tilsig  0.025 145  19 2019-07-18 16:58:00
-NO1 magasin 0.025  94 206 2019-07-18 16:18:00
+NO1 magasin 0.025  94 206 2019-07-19 15:27:00
 NO2 tilsig  0.025 161  81 2019-07-18 17:09:00
-NO2 magasin 0.025  66 196 2019-07-18 16:21:00
+NO2 magasin 0.025  66 196 2019-07-19 15:29:00
 NO3 tilsig  0.025 138 181 2019-07-18 17:18:00
 NO3 magasin 0.025 110  51 2019-07-18 16:26:00
 NO4 tilsig  0.025 145 121 2019-07-18 17:28:00
