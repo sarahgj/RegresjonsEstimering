@@ -46,6 +46,12 @@ for variable in ['magasin', 'tilsig']:
     for region in ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']:
         start_time_loop = utctime_now()
         fasit, fasit_key = make_fasit(variable, region, reg_end, period)
+        
+            
+        if fasit[fasit_key].isnull().any():
+            print('OBS: Det mangler verdier på fasiten! Går videre til neste region i loopen..')
+            continue
+            
         sorted_r2 = get_R2_sorted(variable, df_cleaned, fasit, fasit_key)
 
 
