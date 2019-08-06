@@ -27,32 +27,32 @@ max_input_series = 196
 nb_weeks_tipping = 10  # number of weeks to do tipping back in time
 tz = pytz.timezone('Etc/GMT-1')
 
-#################################################################################################################
-#####                                        READ AND SETUP                                                 #####
-#####-------------------------------------------------------------------------------------------------------#####
-#####           Here series from SMG is read and the rime period etc is setup                               #####
-#################################################################################################################
+########################################################################################################################
+#                                        READ AND SETUP                                                                #
+#                                                                                                                      #
+#           Here series from SMG is read and the rime period etc is .                                                  #
+########################################################################################################################
 
 
-
-def read_and_setup(variable, test=False):
-    """This function is the head function for reading and seting up the series used for the regression
+def read_and_setup(variable: str, test: str=False) -> [pd.DataFrame, list, ReadWrapper, str, str]:
+    """This function is the head function for reading and setting up the series used for the regression
 
     Args:
-        variable: magasin or tilsig
+        variable: must be either 'magasin' or 'tilsig'
 
     Returns:
-        df_week: dataframe with all the time series in weekly values
+        df_week: DataFrame with all the time series in weekly values
         MagKap_list: a list of the MagKap numbers to each series (0 if none).
-        period: period of which the series are read in (to later read the fasit with the same period)
+        period: ReadWrapper with period of which the series are read in (to later read the fasit with the same period)
         forecast_time: Time of "true" forecast
+        read_start: Time of the start of the regression and reading in
 
     Examples:
-        >> inf_week, MagKap_inf, period, forecast_inf = read_and_setup('tilsig')
-        >> mag_week, MagKap_mag, period, forecast_mag = read_and_setup('magasin')
+        >> df_week, MagKap, period, forecast_time, read_start = read_and_setup('tilsig')
     """
-    # start_ time.time()
+
     period, forecast_time, read_start, last_true_value = get_timeperiods(variable, test)
+
     if variable == 'tilsig':
         print('---------------------------------------------------------------')
         print('                        TILSIG                                 ')
@@ -63,7 +63,8 @@ def read_and_setup(variable, test=False):
             list_dict, list_names_dict = import_from_SMG.import_tilsig()
         df_all, MagKap_list = read_import_SMG(variable, list_dict, list_names_dict, period)
         df_week = index2week(df_all, variable).loc[:forecast_time]
-    elif variable == 'magasin':
+
+    else:
         print('---------------------------------------------------------------')
         print('                        MAGASIN                                ')
         print('---------------------------------------------------------------')
@@ -74,9 +75,7 @@ def read_and_setup(variable, test=False):
         df_all, MagKap_list = read_import_SMG(variable, list_dict, list_names_dict, period)
         corrected_mag = GWh2percentage(df_all, MagKap_list)
         df_week = index2week(corrected_mag, variable).loc[:forecast_time]
-    else:
-        print('Input variable does not match the "tilsig" and "magasin"')
-        sys.exit(1)
+
     # Printing information:
     print('Mandag det tippes for: ', forecast_time)
     first_true = True
@@ -87,8 +86,6 @@ def read_and_setup(variable, test=False):
             print(df_week[key].loc[last_true_value], key)
             first_true = False
     print('\n\n')
-    # end_time time.time()
-    #print('Time to read_and_setup: ', end_time - start_time)
     return df_week, MagKap_list, period, forecast_time, read_start
 
 
@@ -120,15 +117,15 @@ def get_timeperiods(variable, test=False):
     
     if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
         # Since we get the values for the tilsig series one week later than the magasin series, some adjustment
-        # is neccessary.
+        # is necessary.
         if variable == 'tilsig':
             reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=14)
-        elif variable == 'magasin':
+        else:
             reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=7)
     else:
         if variable == 'tilsig':
             reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=7)
-        elif variable == 'magasin':
+        else:
             reg_mandag = today - Timedelta(days=today.weekday())
     reg_end = reg_mandag.strftime('%Y.%m.%d')
     # getting the period from the ReadWrapper from statkraft.ssa.wrappers
@@ -181,9 +178,11 @@ def index2week(df, variable):
         datoer = [start + Timedelta(days=7 * i) for i in range(weeks + 1)]
         df_week = df.loc[datoer]
     elif variable == 'tilsig':
-        df_week = pd.DataFrame()
         df_week = df.resample('W', label='left', closed='right').sum()
         df_week = df_week.shift(1, freq='D')
+    else:
+        print('wrong variable, must be either magasin or tilsig')
+        sys.exit(1)
     # end_time time.time()
     #print('Time to run index2week: ', end_time - start_time)
     return df_week
@@ -203,18 +202,18 @@ def deletingNaNs(df):
 
 
 def read_import_SMG(variable, list_dict, list_names, period):
-    """This function reads timeseries from SMG_PROD, and is specially designed for the read_and_setup() module.
+    """This function reads time series from SMG_PROD, and is specially designed for the read_and_setup() module.
 
     Args:
         variable: Either 'tilsig' or 'magasin' dependent on what regression the series to be read should be used for.
         list_dict: A list of dictionaries containing the series to be read for the respective regression, and also 
-        MagKap if needed (othervise MagKap = 0).
+        MagKap if needed (otherwise MagKap = 0).
         list_names: A list of names of each dict in list_dict. It is used for printing aout the name for the dict of 
         series hvile read.
         period: Time period that the series should be read in for. This is the output of the function: get_timeperiods().
 
     Returns:
-        df: Dataframe with all series that are intended for the regression of ..variable..
+        df: DataFrame with all series that are intended for the regression of ..variable..
         MagKap_dict: A dictionary of MagKaps for all series.
 
     Examples:
@@ -232,12 +231,11 @@ def read_import_SMG(variable, list_dict, list_names, period):
         keys_dict = []
         MagKap = {}
         print(f'Leser nå {dict_name}..')
-        # seperating the series keys and the MagKap number in the dictionaries
+        # separating the series keys and the MagKap number in the dictionaries
         for key in series:
             keys_dict.append(series[key][0])
             if len(series[key]) >= 2:
                 MagKap[series[key][0]] = series[key][1]
-        read_start = utctime_now()
         # reading all series in each dict.
         df = period.read(keys_dict)
         return df, MagKap
@@ -262,7 +260,6 @@ def read_import_SMG(variable, list_dict, list_names, period):
 
 
 def make_fasit_key(variable, region):
-    # start_ time.time()
     if ('N' in region) and (variable == 'tilsig'):
         fasit_key = '/Norg-No' + region[-1] + '.Fasit.....-U9100S0BT0105'
     elif ('S' in region) and (variable == 'tilsig'):
@@ -274,8 +271,6 @@ def make_fasit_key(variable, region):
     else:
         print('Could not make fasit_key from variable and region')
         sys.exit(1)
-    # end_time time.time()
-    #print('Time to run make_fasit_key: ',end_time-start_time)
     return fasit_key
 
 
@@ -290,8 +285,8 @@ def get_input_variables_from_file(variable, region, backup=False):
         for line in file:
             if line.startswith(string2find):
                 max_p = float(line[12:17])
-                ant_kandidater = int(line[18:21]) 
-                reg_period =int(line[22:25])
+                ant_kandidater: int = int(line[18:21])
+                reg_period: int =int(line[22:25])
     # end_time time.time()
     #print('Time to run get_input_variables_from_file: ',end_time-start_time)
     return reg_period, max_p, ant_kandidater, input_file
@@ -535,7 +530,6 @@ def show_result_jupyter(input1, input2, variable_file=False):
 
 
 def write_SMG_regresjon(variable, region, df):
-    # start_time = time.time()
     """This function writes pandas series (df) to smg series (ts) chosen according to the chosen region."""
     smg = TimeSeriesRepositorySmg(SMG_PROD)
 
@@ -557,11 +551,9 @@ def write_SMG_regresjon(variable, region, df):
 
     # writing
     result = smg.write([time_series_to_write])
-    # start_ time.time()
-    #print('Time to run write_SMG_regresjon: ',end_time-start_time)
 
 
-def write_V_SMG_Regresjon(df_tot, results, chosen_p, fasit_key, r2_modelled, MagKap_mag=False):
+def write_V_SMG_Regresjon(results, chosen_p, fasit_key, r2_modelled, MagKap_mag=False):
     start_time = time.time()
     now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
     expression = str('! Sist oppdatert {}\n!R2 med {} serier: {}\n'.format(now, len(chosen_p), r2_modelled))
@@ -609,10 +601,143 @@ def write_V_SMG_Regresjon(df_tot, results, chosen_p, fasit_key, r2_modelled, Mag
     print('Time to run write_V_SMG_Regresjon: ',end_time-start_time)
 
 
-    
- 
+def run_regression(auto_input,
+               variables: list = ['magasin', 'tilsig'],
+               regions: list = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'],
+               jupyter: bool = False,
+               backup: bool = False,
+               loop: bool = False) -> None:
 
+    start_tuning = utctime_now()
+    columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samlet', 'short_period', 'max_p']
+    # Initializing
+    max_p = 0.025
+    first_period = 216  # Finn hele perioden
 
+    for variable in variables:
 
+        if not variable in ['magasin', 'tilsig']:
+            sys.exit("Variable must be either 'tilsig' or 'magasin'")
 
+        df_week, MagKap, period, forecast_time, read_start = auto_input[variable]
+        reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
+            '%Y.%m.%d')
 
+        if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+            last_forecast = forecast_time
+        else:
+            last_forecast = reg_end
+
+        df_cleaned = deletingNaNs(df_week.loc[:last_forecast])
+
+        if loop:
+            if variable == 'tilsig':
+                print('---------------------------------------------------------------')
+                print('                        TILSIG                                 ')
+                print('---------------------------------------------------------------')
+                max_kandidater = 196
+                min_kandidater = 5
+
+            else:
+                print('---------------------------------------------------------------')
+                print('                        MAGASIN                                ')
+                print('---------------------------------------------------------------')
+                max_kandidater = 135
+                min_kandidater = 5
+
+            max_weeks = 208
+            min_weeks = 10
+            print('max ant. kandidater: {}, min ant. kandidater: {}'.format(max_kandidater, min_kandidater))
+            print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
+
+        for region in regions:
+
+            if not region in ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']:
+                sys.exit("Region must one out of: 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'")
+
+            start_time_loop = utctime_now()
+            fasit, fasit_key = make_fasit(variable, region, reg_end, period)
+
+            if fasit[fasit_key].isnull().any():
+                print('OBS: Det mangler verdier på fasiten! Går videre til neste region i loopen..')
+                continue
+
+            sorted_r2 = get_R2_sorted(variable, df_cleaned, fasit, fasit_key)
+
+            if loop:
+
+                # First loop: Tuning number of candidates for best possible R2 combined
+                df_ant_kandidater = pd.DataFrame(columns=columns)
+                for antall in range(min_kandidater, max_kandidater + 1, 2):
+                    if antall > len(sorted_r2):
+                        chosen_r2 = sorted_r2
+                    else:
+                        chosen_r2 = sorted_r2[:antall]
+                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, first_period, max_p, chosen_r2,
+                                           loop=True)
+                    df_ant_kandidater = df_ant_kandidater.append(
+                        {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
+                         columns[4]: output[4], columns[5]: output[5], columns[6]: output[6]}, ignore_index=True)
+                    if antall > len(sorted_r2):
+                        print('Feilmelding: Ønsket antall kandidater overskrider maks (%i).\n' % len(sorted_r2))
+                        break
+                idx_max = df_ant_kandidater.r2_samlet.idxmax(skipna=True)
+                ant_kandidater_beste = int(df_ant_kandidater.ant_kandidater.values[idx_max])
+                print('Beste ant_kandidater loop 1: ', ant_kandidater_beste)
+
+                # Second loop: tuning length of the short regression for best possible R2 combined, using the best number of
+                # candidates found in the First loop.
+                df_short_period = pd.DataFrame(columns=columns)
+                for short_period in range(min_weeks, max_weeks + 1, 4):
+                    short_period = int(short_period)
+                    final_chosen_r2 = sorted_r2[:ant_kandidater_beste]
+                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p,
+                                           final_chosen_r2, loop=True)
+                    df_short_period = df_short_period.append(
+                        {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
+                         columns[4]: output[4], columns[5]: output[5], columns[6]: output[6]}, ignore_index=True)
+                idx_max = df_short_period.r2_samlet.idxmax(skipna=True)
+                short_period_beste = int(df_short_period.short_period.values[idx_max])
+                print('Beste short_period loop 2: ', short_period_beste)
+
+                # Getting the best input variables from loop and write to input_variables_from_tuning.txt
+                df_all_methods = pd.concat([df_ant_kandidater, df_short_period], ignore_index=True, sort=False)
+                idx_max = df_all_methods.r2_samlet.idxmax(skipna=True)
+                ant_kandidater_beste = int(df_all_methods.ant_kandidater.values[idx_max])
+                chosen_r2_beste = sorted_r2[:ant_kandidater_beste]
+                short_period_beste = df_all_methods.short_period.values[idx_max]
+                write_input_variables_to_file(region, variable, max_p, ant_kandidater_beste, short_period_beste)
+
+            else:
+                #getting the best variables from input_variables_from_tuning.txt or input_variables_backup.txr
+                short_period_beste, max_p, ant_kandidater_beste, input_file = get_input_variables_from_file(variable, region, backup)
+                chosen_r2_beste = sorted_r2[:ant_kandidater_beste]
+                print("Input variables was read from: ", input_file)
+
+            # Show results
+            input1 = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period_beste, max_p,
+                                   chosen_r2_beste, loop=False)
+            input2 = fasit_key, ant_kandidater_beste, max_p, reg_end, read_start
+
+            if not loop:
+                #Write results from the regression to SMG.
+                fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping = input1
+
+                # write to SMG:
+                write_SMG_regresjon(variable, region, tipping_df)
+
+                # write to SMG, virtual:
+                write_V_SMG_Regresjon(short_results, chosen_p, fasit_key, r2_modelled, MagKap)
+
+            if jupyter:
+                show_result_jupyter(input1, input2)
+            else:
+                show_result(input1, input2)
+
+            print('\nTuning for regionen tok %.0f minutter. \n' % ((utctime_now() - start_time_loop) / 60))
+
+    print('---------------------------------------------------------------')
+    print('                         SLUTT                                 ')
+    print('---------------------------------------------------------------')
+    print('\nRegresjon for alle regioner og variabler brukte totalt %.0f minutter. \n' % (
+                (utctime_now() - start_tuning) / 60))

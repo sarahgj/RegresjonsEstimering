@@ -1,25 +1,8 @@
 import pytest
-import sys
-import pandas as pd
-import time
-import pytz
-import math
-import numpy as np
-import matplotlib.pyplot as plt
-from pandas import Timedelta
+
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 from pandas.util.testing import assert_frame_equal
-
-from shyft.api import utctime_now  # To time the reading from SMG
-import statsmodels.api as sm
-from statkraft.ssa.wrappers import ReadWrapper
-from statkraft.ssa.timeseriesrepository import TimeSeriesRepositorySmg
-from statkraft.ssa.environment import SMG_PROD
-from statkraft.ssa.adapter import ts_from_pandas_series
-
-from shyft.api import utctime_now  # To time the reading from SMG
-
 from regression_modules import *
 start_time = utctime_now()
 
