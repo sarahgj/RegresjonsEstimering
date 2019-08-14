@@ -20,12 +20,16 @@ from statkraft.ssa.adapter import ts_from_pandas_series
 import import_from_SMG
 import import_from_SMG_test
 
+
+#Global variables
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now
-min_kandidater = 6
 max_final_numb_kandidater = 25
 max_input_series = 196
 nb_weeks_tipping = 10  # number of weeks to do tipping back in time
 tz = pytz.timezone('Etc/GMT-1')
+columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samlet', 'short_period', 'max_p']
+max_p = 0.025
+first_period = 216  # Length of the long regression in weeks
 
 ########################################################################################################################
 #                                        READ AND SETUP                                                                #
@@ -257,6 +261,161 @@ def read_import_SMG(variable, list_dict, list_names, period):
 #####-------------------------------------------------------------------------------------------------------#####
 #####                                                                                                       #####
 #################################################################################################################
+
+def run_regression(auto_input,
+               variables: list = ['magasin', 'tilsig'],
+               regions: list = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'],
+               jupyter: bool = False,
+               backup: bool = False,
+               loop: bool = False) -> None:
+    """This function is the head function for the regression and it also deals with the outputs.
+
+    Args:
+        variable: Must be either 'magasin' or 'tilsig'
+        regions: Must be one or more of the default regions
+        jupyter: Set to Tru if the code is runned on Jupyter Notebooks
+        backup: Set to True if you would rather use the backup input variables (input_variables_backup.txt) than the
+                automatically updated variables from the last tuning (input_variables_from_tuning.txt).
+        loop: Set to True if you want to do a Tuning to update input_variavles_from_tuning.txt and run the loop. This
+                takes approximately half an hour.
+
+    Tuning example:
+        >> run_regression(auto_input, loop=True)
+    Updating SMG on Jupyter Notebooks exaple:
+        >> run_regression(auto_input, jupyter=True)
+    """
+
+    start_tuning = utctime_now()
+
+    for variable in variables:
+
+        if not variable in ['magasin', 'tilsig']:
+            sys.exit("Variable must be either 'tilsig' or 'magasin'")
+
+        df_week, MagKap, period, forecast_time, read_start = auto_input[variable]
+        reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
+            '%Y.%m.%d')
+
+        if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+            last_forecast = forecast_time
+        else:
+            last_forecast = reg_end
+
+        df_cleaned = deletingNaNs(df_week.loc[:last_forecast])
+
+        if loop:
+            if variable == 'tilsig':
+                print('---------------------------------------------------------------')
+                print('                        TILSIG                                 ')
+                print('---------------------------------------------------------------')
+                max_kandidater = 196
+                min_kandidater = 5
+
+            else:
+                print('---------------------------------------------------------------')
+                print('                        MAGASIN                                ')
+                print('---------------------------------------------------------------')
+                max_kandidater = 135
+                min_kandidater = 5
+
+            max_weeks = 208
+            min_weeks = 10
+            print('max ant. kandidater: {}, min ant. kandidater: {}'.format(max_kandidater, min_kandidater))
+            print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
+
+        for region in regions:
+
+            if not region in ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']:
+                sys.exit("Region must one out of: 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'")
+
+            start_time_loop = utctime_now()
+            fasit, fasit_key = make_fasit(variable, region, reg_end, period)
+
+            if fasit[fasit_key].isnull().any():
+                print('OBS: Det mangler verdier på fasiten! Går videre til neste region i loopen..')
+                continue
+
+            sorted_r2 = get_R2_sorted(variable, df_cleaned, fasit, fasit_key)
+
+            if loop:
+
+                # First loop: Tuning number of candidates for best possible R2 combined
+                df_ant_kandidater = pd.DataFrame(columns=columns)
+                for antall in range(min_kandidater, max_kandidater + 1, 2):
+                    if antall > len(sorted_r2):
+                        chosen_r2 = sorted_r2
+                    else:
+                        chosen_r2 = sorted_r2[:antall]
+                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, first_period, max_p, chosen_r2,
+                                           loop=True)
+                    df_ant_kandidater = df_ant_kandidater.append(
+                        {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
+                         columns[4]: output[4], columns[5]: output[5], columns[6]: output[6]}, ignore_index=True)
+                    if antall > len(sorted_r2):
+                        print('Feilmelding: Ønsket antall kandidater overskrider maks (%i).\n' % len(sorted_r2))
+                        break
+                idx_max = df_ant_kandidater.r2_samlet.idxmax(skipna=True)
+                ant_kandidater_beste = int(df_ant_kandidater.ant_kandidater.values[idx_max])
+                print('Beste ant_kandidater loop 1: ', ant_kandidater_beste)
+
+                # Second loop: tuning length of the short regression for best possible R2 combined, using the best number of
+                # candidates found in the First loop.
+                df_short_period = pd.DataFrame(columns=columns)
+                for short_period in range(min_weeks, max_weeks + 1, 4):
+                    short_period = int(short_period)
+                    final_chosen_r2 = sorted_r2[:ant_kandidater_beste]
+                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p,
+                                           final_chosen_r2, loop=True)
+                    df_short_period = df_short_period.append(
+                        {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
+                         columns[4]: output[4], columns[5]: output[5], columns[6]: output[6]}, ignore_index=True)
+                idx_max = df_short_period.r2_samlet.idxmax(skipna=True)
+                short_period_beste = int(df_short_period.short_period.values[idx_max])
+                print('Beste short_period loop 2: ', short_period_beste)
+
+                # Getting the best input variables from loop and write to input_variables_from_tuning.txt
+                df_all_methods = pd.concat([df_ant_kandidater, df_short_period], ignore_index=True, sort=False)
+                idx_max = df_all_methods.r2_samlet.idxmax(skipna=True)
+                ant_kandidater_beste = int(df_all_methods.ant_kandidater.values[idx_max])
+                chosen_r2_beste = sorted_r2[:ant_kandidater_beste]
+                short_period_beste = df_all_methods.short_period.values[idx_max]
+                write_input_variables_to_file(region, variable, max_p, ant_kandidater_beste, short_period_beste)
+
+            else:
+                #getting the best variables from input_variables_from_tuning.txt or input_variables_backup.txr
+                short_period_beste, max_p, ant_kandidater_beste, input_file = get_input_variables_from_file(variable, region, backup)
+                chosen_r2_beste = sorted_r2[:ant_kandidater_beste]
+                print("Input variables was read from: ", input_file)
+
+            # Show results
+            input1 = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period_beste, max_p,
+                                   chosen_r2_beste, loop=False)
+            input2 = fasit_key, ant_kandidater_beste, max_p, reg_end, read_start
+
+            if not loop:
+                #Write results from the regression to SMG.
+                fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping = input1
+
+                # write to SMG:
+                write_SMG_regresjon(variable, region, tipping_df)
+
+                # write to SMG, virtual:
+                write_V_SMG_Regresjon(short_results, chosen_p, fasit_key, r2_modelled, MagKap)
+
+            if jupyter:
+                show_result_jupyter(input1, input2)
+            else:
+                show_result(input1, input2)
+
+            print('\nTuning for regionen tok %.0f minutter. \n' % ((utctime_now() - start_time_loop) / 60))
+
+    print('---------------------------------------------------------------')
+    print('                         SLUTT                                 ')
+    print('---------------------------------------------------------------')
+    print('\nRegresjon for alle regioner og variabler brukte totalt %.0f minutter. \n' % (
+                (utctime_now() - start_tuning) / 60))
+
+
 
 
 def make_fasit_key(variable, region):
@@ -601,143 +760,3 @@ def write_V_SMG_Regresjon(results, chosen_p, fasit_key, r2_modelled, MagKap_mag=
     print('Time to run write_V_SMG_Regresjon: ',end_time-start_time)
 
 
-def run_regression(auto_input,
-               variables: list = ['magasin', 'tilsig'],
-               regions: list = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'],
-               jupyter: bool = False,
-               backup: bool = False,
-               loop: bool = False) -> None:
-
-    start_tuning = utctime_now()
-    columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samlet', 'short_period', 'max_p']
-    # Initializing
-    max_p = 0.025
-    first_period = 216  # Finn hele perioden
-
-    for variable in variables:
-
-        if not variable in ['magasin', 'tilsig']:
-            sys.exit("Variable must be either 'tilsig' or 'magasin'")
-
-        df_week, MagKap, period, forecast_time, read_start = auto_input[variable]
-        reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
-            '%Y.%m.%d')
-
-        if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
-            last_forecast = forecast_time
-        else:
-            last_forecast = reg_end
-
-        df_cleaned = deletingNaNs(df_week.loc[:last_forecast])
-
-        if loop:
-            if variable == 'tilsig':
-                print('---------------------------------------------------------------')
-                print('                        TILSIG                                 ')
-                print('---------------------------------------------------------------')
-                max_kandidater = 196
-                min_kandidater = 5
-
-            else:
-                print('---------------------------------------------------------------')
-                print('                        MAGASIN                                ')
-                print('---------------------------------------------------------------')
-                max_kandidater = 135
-                min_kandidater = 5
-
-            max_weeks = 208
-            min_weeks = 10
-            print('max ant. kandidater: {}, min ant. kandidater: {}'.format(max_kandidater, min_kandidater))
-            print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
-
-        for region in regions:
-
-            if not region in ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']:
-                sys.exit("Region must one out of: 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'")
-
-            start_time_loop = utctime_now()
-            fasit, fasit_key = make_fasit(variable, region, reg_end, period)
-
-            if fasit[fasit_key].isnull().any():
-                print('OBS: Det mangler verdier på fasiten! Går videre til neste region i loopen..')
-                continue
-
-            sorted_r2 = get_R2_sorted(variable, df_cleaned, fasit, fasit_key)
-
-            if loop:
-
-                # First loop: Tuning number of candidates for best possible R2 combined
-                df_ant_kandidater = pd.DataFrame(columns=columns)
-                for antall in range(min_kandidater, max_kandidater + 1, 2):
-                    if antall > len(sorted_r2):
-                        chosen_r2 = sorted_r2
-                    else:
-                        chosen_r2 = sorted_r2[:antall]
-                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, first_period, max_p, chosen_r2,
-                                           loop=True)
-                    df_ant_kandidater = df_ant_kandidater.append(
-                        {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
-                         columns[4]: output[4], columns[5]: output[5], columns[6]: output[6]}, ignore_index=True)
-                    if antall > len(sorted_r2):
-                        print('Feilmelding: Ønsket antall kandidater overskrider maks (%i).\n' % len(sorted_r2))
-                        break
-                idx_max = df_ant_kandidater.r2_samlet.idxmax(skipna=True)
-                ant_kandidater_beste = int(df_ant_kandidater.ant_kandidater.values[idx_max])
-                print('Beste ant_kandidater loop 1: ', ant_kandidater_beste)
-
-                # Second loop: tuning length of the short regression for best possible R2 combined, using the best number of
-                # candidates found in the First loop.
-                df_short_period = pd.DataFrame(columns=columns)
-                for short_period in range(min_weeks, max_weeks + 1, 4):
-                    short_period = int(short_period)
-                    final_chosen_r2 = sorted_r2[:ant_kandidater_beste]
-                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p,
-                                           final_chosen_r2, loop=True)
-                    df_short_period = df_short_period.append(
-                        {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
-                         columns[4]: output[4], columns[5]: output[5], columns[6]: output[6]}, ignore_index=True)
-                idx_max = df_short_period.r2_samlet.idxmax(skipna=True)
-                short_period_beste = int(df_short_period.short_period.values[idx_max])
-                print('Beste short_period loop 2: ', short_period_beste)
-
-                # Getting the best input variables from loop and write to input_variables_from_tuning.txt
-                df_all_methods = pd.concat([df_ant_kandidater, df_short_period], ignore_index=True, sort=False)
-                idx_max = df_all_methods.r2_samlet.idxmax(skipna=True)
-                ant_kandidater_beste = int(df_all_methods.ant_kandidater.values[idx_max])
-                chosen_r2_beste = sorted_r2[:ant_kandidater_beste]
-                short_period_beste = df_all_methods.short_period.values[idx_max]
-                write_input_variables_to_file(region, variable, max_p, ant_kandidater_beste, short_period_beste)
-
-            else:
-                #getting the best variables from input_variables_from_tuning.txt or input_variables_backup.txr
-                short_period_beste, max_p, ant_kandidater_beste, input_file = get_input_variables_from_file(variable, region, backup)
-                chosen_r2_beste = sorted_r2[:ant_kandidater_beste]
-                print("Input variables was read from: ", input_file)
-
-            # Show results
-            input1 = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period_beste, max_p,
-                                   chosen_r2_beste, loop=False)
-            input2 = fasit_key, ant_kandidater_beste, max_p, reg_end, read_start
-
-            if not loop:
-                #Write results from the regression to SMG.
-                fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping = input1
-
-                # write to SMG:
-                write_SMG_regresjon(variable, region, tipping_df)
-
-                # write to SMG, virtual:
-                write_V_SMG_Regresjon(short_results, chosen_p, fasit_key, r2_modelled, MagKap)
-
-            if jupyter:
-                show_result_jupyter(input1, input2)
-            else:
-                show_result(input1, input2)
-
-            print('\nTuning for regionen tok %.0f minutter. \n' % ((utctime_now() - start_time_loop) / 60))
-
-    print('---------------------------------------------------------------')
-    print('                         SLUTT                                 ')
-    print('---------------------------------------------------------------')
-    print('\nRegresjon for alle regioner og variabler brukte totalt %.0f minutter. \n' % (
-                (utctime_now() - start_tuning) / 60))

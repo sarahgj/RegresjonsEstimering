@@ -7,7 +7,7 @@ import traceback
 from regression_modules import *
 
 start_time = utctime_now()
-sti_til_logfilområde = ''
+sti_til_logfilområde = 'Logging'
 
 log_file = os.path.join(sti_til_logfilområde,  # folder with log files
                             '{}#{}#{}#{}.log'.format(
