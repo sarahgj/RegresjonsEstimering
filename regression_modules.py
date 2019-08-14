@@ -28,8 +28,8 @@ max_input_series = 196
 nb_weeks_tipping = 10  # number of weeks to do tipping back in time
 tz = pytz.timezone('Etc/GMT-1')
 columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samlet', 'short_period', 'max_p']
-max_p = 0.025
 first_period = 216  # Length of the long regression in weeks
+min_kandidater = 6
 
 ########################################################################################################################
 #                                        READ AND SETUP                                                                #
@@ -175,18 +175,20 @@ def index2week(df, variable):
     if variable == 'magasin':
         diff = df.index[-1] - df.index[0]  # number of days in df
         weeks = math.floor(diff.days / 7)  # number of weeks in df
+        start = False
         for date in df.index:
             if date.weekday() == 0 and date.hour == 0:
                 start = date
                 break
+            if not start:
+                sys.exit("Something went wrong with finding the first monday og the dataframe in the index2week")
         datoer = [start + Timedelta(days=7 * i) for i in range(weeks + 1)]
         df_week = df.loc[datoer]
     elif variable == 'tilsig':
         df_week = df.resample('W', label='left', closed='right').sum()
         df_week = df_week.shift(1, freq='D')
     else:
-        print('wrong variable, must be either magasin or tilsig')
-        sys.exit(1)
+        sys.exit("wrong variable, must be either magasin or tilsig")
     # end_time time.time()
     #print('Time to run index2week: ', end_time - start_time)
     return df_week
@@ -324,12 +326,15 @@ def run_regression(auto_input,
             print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
 
         for region in regions:
-
+            print('---------------------------------------------------------------')
+            print('                          {}                                  '.format(region))
+            print('---------------------------------------------------------------')
             if not region in ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']:
                 sys.exit("Region must one out of: 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'")
 
             start_time_loop = utctime_now()
             fasit, fasit_key = make_fasit(variable, region, reg_end, period)
+            print('Fasit er lest inn.\n')
 
             if fasit[fasit_key].isnull().any():
                 print('OBS: Det mangler verdier på fasiten! Går videre til neste region i loopen..')
@@ -338,6 +343,7 @@ def run_regression(auto_input,
             sorted_r2 = get_R2_sorted(variable, df_cleaned, fasit, fasit_key)
 
             if loop:
+                max_p = 0.025
 
                 # First loop: Tuning number of candidates for best possible R2 combined
                 df_ant_kandidater = pd.DataFrame(columns=columns)
@@ -346,8 +352,7 @@ def run_regression(auto_input,
                         chosen_r2 = sorted_r2
                     else:
                         chosen_r2 = sorted_r2[:antall]
-                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, first_period, max_p, chosen_r2,
-                                           loop=True)
+                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, first_period, max_p, chosen_r2, loop=True)
                     df_ant_kandidater = df_ant_kandidater.append(
                         {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
                          columns[4]: output[4], columns[5]: output[5], columns[6]: output[6]}, ignore_index=True)
@@ -364,8 +369,7 @@ def run_regression(auto_input,
                 for short_period in range(min_weeks, max_weeks + 1, 4):
                     short_period = int(short_period)
                     final_chosen_r2 = sorted_r2[:ant_kandidater_beste]
-                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p,
-                                           final_chosen_r2, loop=True)
+                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p, final_chosen_r2, loop=True)
                     df_short_period = df_short_period.append(
                         {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
                          columns[4]: output[4], columns[5]: output[5], columns[6]: output[6]}, ignore_index=True)
@@ -428,13 +432,11 @@ def make_fasit_key(variable, region):
     elif ('S' in region) and (variable == 'magasin'):
         fasit_key = '/Sver-SE' + region[-1] + '.Fasit.....-U9104A5R-0132'
     else:
-        print('Could not make fasit_key from variable and region')
-        sys.exit(1)
+        sys.exit("Could not make fasit_key from variable and region")
     return fasit_key
 
 
 def get_input_variables_from_file(variable, region, backup=False):
-    # start_ time.time()
     if backup:
         input_file = 'input_variables_backup.txt'
     else:
@@ -446,8 +448,6 @@ def get_input_variables_from_file(variable, region, backup=False):
                 max_p = float(line[12:17])
                 ant_kandidater: int = int(line[18:21])
                 reg_period: int =int(line[22:25])
-    # end_time time.time()
-    #print('Time to run get_input_variables_from_file: ',end_time-start_time)
     return reg_period, max_p, ant_kandidater, input_file
 
 
@@ -491,7 +491,6 @@ def calc_R2(Fasit, Model):
 
 
 def get_R2_sorted(variable, df_cleaned, fasit, fasit_key):
-    start_r2_time = time.time()
     r2_original = pd.Series()
     for key in df_cleaned:
         if variable == 'tilsig':
@@ -504,14 +503,11 @@ def get_R2_sorted(variable, df_cleaned, fasit, fasit_key):
         elif variable == 'magasin':
             r2_original[key] = calc_R2(fasit[fasit_key], df_cleaned[key])
         else:
-            print('wrong variable')
-            sys.exit(1)
+            sys.exit("wrong variable")
 
     # Chosing the chosen number of best r2 keys
     sorting = r2_original.sort_values(ascending=False)
     sorted_r2 = list(sorting.axes[0][:max_input_series])
-    end_r2_time = time.time()
-    # print('Time to get chosen_r2 from df_cleaned: ', end_r2_time - start_r2_time)
     return sorted_r2
 
 
@@ -647,8 +643,7 @@ def show_result_jupyter(input1, input2, variable_file=False):
     elif fasit_key[-3:] == '132':
         color_tipping = 'lightblue'
     else:
-        print("The fasit key should end with 105 or 132")
-        sys.exit(1)
+        sys.exit("The fasit key should end with 105 or 132")
     
     # Plot with regression:    
     plt.figure(figsize=(16, 10))
