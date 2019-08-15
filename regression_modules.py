@@ -18,8 +18,7 @@ from statkraft.ssa.adapter import ts_from_pandas_series
 
 
 import import_from_SMG
-import import_from_SMG_test
-
+from tests import import_from_SMG_test
 
 #Global variables
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now
@@ -55,7 +54,7 @@ def read_and_setup(variable: str, test: str=False) -> [pd.DataFrame, list, ReadW
         >> df_week, MagKap, period, forecast_time, read_start = read_and_setup('tilsig')
     """
 
-    period, forecast_time, read_start, last_true_value = get_timeperiods(variable, test)
+    period, forecast_time, read_start = get_timeperiods(variable, test)
 
     if variable == 'tilsig':
         print('---------------------------------------------------------------')
@@ -84,16 +83,16 @@ def read_and_setup(variable: str, test: str=False) -> [pd.DataFrame, list, ReadW
     print('Mandag det tippes for: ', forecast_time)
     first_true = True
     for key in df_week:
-        if not df_week[key].loc[last_true_value] > 0:
+        if not df_week[key].loc[forecast_time] > 0:
             if first_true:
-                print('\n-------------------Feil i kjente %s verdier--------------------' % variable)
-            print(df_week[key].loc[last_true_value], key)
+                print('\n-------------------Feil i siste verdi for kjente %s--------------------' % variable)
+            print(df_week[key].loc[forecast_time], key)
             first_true = False
     print('\n\n')
     return df_week, MagKap_list, period, forecast_time, read_start
 
 
-def get_timeperiods(variable, test=False):
+def get_timeperiods(variable: str, test: str = False) -> [ReadWrapper, str, str]:
     """This function finds what day it is today and chooses from that information the end of the regression
     and the time period of which the series should be read. It is used for read_and_setup().
 
@@ -103,46 +102,42 @@ def get_timeperiods(variable, test=False):
     Returns:
         period: time period of which the series should be read (using the ReadWrapper from statkraft.ssa.wrappers)
         forecast_time: Time of last forecast
-
-    Examples:
-        >> period, forecast_inf, reg_end_inf, reg_start_inf = get_timeperiods('tilsig')
-        >> period, forecast_mag, reg_end_mag, reg_start_mag = get_timeperiods('magasin')
+        read_start: start time of the regression on the period etc
     """
-    # start_ time.time()
     if test == 'mandag':
-        today = pd.to_datetime("2019.07.22 11:00", format="%Y.%m.%d %H:%M", errors='ignore')
+        now = pd.to_datetime("2019.06.24 11:00", format="%Y.%m.%d %H:%M", errors='ignore')
     elif test == 'onsdag':
-        today = pd.to_datetime("2019.07.24 11:00", format="%Y.%m.%d %H:%M", errors='ignore')
+        now = pd.to_datetime("2019.06.27 14:00", format="%Y.%m.%d %H:%M", errors='ignore')
     else:
-        today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # today/now
+        now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
+
     read_start = '2015.06.08'
-    read_end = today + Timedelta(days=7)
-    # The fasit value appears on wednesday 14 o'clock limiting the end time of the regression.
-    
-    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+    read_end = now + Timedelta(days=7)
+
+    # getting the period from the ReadWrapper from statkraft.ssa.wrappers
+    period = ReadWrapper(start_time=read_start, end_time=read_end, read_from='SMG_PROD', tz=tz)
+
+    # The fasit value (unknown) appears on wednesday 14 o'clock limiting the end time of the regression.
+    # The forecast time is the time of the last true value of kjente magasin and tilsig.
+    if (0 <= now.weekday() <= 1) or (now.weekday() == 2 and now.hour < 14):  # before wednesday 2pm
         # Since we get the values for the tilsig series one week later than the magasin series, some adjustment
         # is necessary.
         if variable == 'tilsig':
-            reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=14)
+            reg_mandag = now - Timedelta(days=now.weekday()) - Timedelta(days=14)
         else:
-            reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=7)
+            reg_mandag = now - Timedelta(days=now.weekday()) - Timedelta(days=7)
     else:
         if variable == 'tilsig':
-            reg_mandag = today - Timedelta(days=today.weekday()) - Timedelta(days=7)
+            reg_mandag = now - Timedelta(days=now.weekday()) - Timedelta(days=7)
         else:
-            reg_mandag = today - Timedelta(days=today.weekday())
-    reg_end = reg_mandag.strftime('%Y.%m.%d')
-    # getting the period from the ReadWrapper from statkraft.ssa.wrappers
-    period = ReadWrapper(start_time=read_start, end_time=read_end, read_from='SMG_PROD', tz=tz)
+            reg_mandag = now - Timedelta(days=now.weekday())
     # calculating forecast time and start of regression
-    forecast_time = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") + Timedelta(days=7)).strftime('%Y.%m.%d')
-    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
-        last_true_value = forecast_time
+    if (0 <= now.weekday() <= 1) or (now.weekday() == 2 and now.hour < 14):  # before wednesday 2pm
+        forecast_time = (reg_mandag + Timedelta(days=7)).strftime('%Y.%m.%d')
     else:
-        last_true_value = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime('%Y.%m.%d')
-    # end_time time.time()
-    #print('Time to run get_timeperiods: ', end_time - start_time)
-    return period, forecast_time, read_start, last_true_value
+        forecast_time = reg_mandag.strftime('%Y.%m.%d')
+
+    return period, forecast_time, read_start
 
 def GWh2percentage(df, MagKap):
     """This function converts from GWh to percentage magasinfylling.
@@ -385,6 +380,8 @@ def run_regression(auto_input,
                 short_period_beste = df_all_methods.short_period.values[idx_max]
                 write_input_variables_to_file(region, variable, max_p, ant_kandidater_beste, short_period_beste)
 
+                print('\nTuning for regionen tok %.0f minutter. \n' % ((utctime_now() - start_time_loop) / 60))
+
             else:
                 #getting the best variables from input_variables_from_tuning.txt or input_variables_backup.txr
                 short_period_beste, max_p, ant_kandidater_beste, input_file = get_input_variables_from_file(variable, region, backup)
@@ -411,8 +408,6 @@ def run_regression(auto_input,
             else:
                 show_result(input1, input2)
 
-            print('\nTuning for regionen tok %.0f minutter. \n' % ((utctime_now() - start_time_loop) / 60))
-
     print('---------------------------------------------------------------')
     print('                         SLUTT                                 ')
     print('---------------------------------------------------------------')
@@ -436,11 +431,17 @@ def make_fasit_key(variable, region):
     return fasit_key
 
 
-def get_input_variables_from_file(variable, region, backup=False):
-    if backup:
-        input_file = 'input_variables_backup.txt'
+def get_input_variables_from_file(variable, region, backup=False, test=False):
+    if test:
+        if backup:
+            input_file = r'..\input_variables_backup.txt'
+        else:
+            input_file = r'..\input_variables_from_tuning.txt'
     else:
-        input_file = 'input_variables_from_tuning.txt'
+        if backup:
+            input_file = 'input_variables_backup.txt'
+        else:
+            input_file = 'input_variables_from_tuning.txt'
     string2find = '{:3} {:7}'.format(region,variable)
     with open(input_file,"r") as file:
         for line in file:
@@ -474,6 +475,7 @@ def write_input_variables_to_file(region, variable, max_p, ant_kandidater, reg_p
 def make_fasit(variable, region, reg_end, period):
     fasit_key = make_fasit_key(variable, region)
     fasit = period.read([fasit_key]).loc[:reg_end]
+    print(fasit)
     return fasit, fasit_key
 
 
