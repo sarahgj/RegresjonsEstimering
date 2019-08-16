@@ -475,7 +475,6 @@ def write_input_variables_to_file(region, variable, max_p, ant_kandidater, reg_p
 def make_fasit(variable, region, reg_end, period):
     fasit_key = make_fasit_key(variable, region)
     fasit = period.read([fasit_key]).loc[:reg_end]
-    print(fasit)
     return fasit, fasit_key
 
 
@@ -594,6 +593,11 @@ def regression(df_tot, fasit_key, chosen, max_p):
     return results, chosen_p, ant_break
 
 
+#################################################################################################################
+#####                               GENERAL METHODS                                                         #####
+#####-------------------------------------------------------------------------------------------------------#####
+#####                                                                                                       #####
+#################################################################################################################
 
 
 def show_result(input1, input2, variable_file=False):

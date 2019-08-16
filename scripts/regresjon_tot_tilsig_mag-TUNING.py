@@ -4,10 +4,10 @@ import logging
 import os
 import traceback
 
-from regression_modules import *
+from modules.regression_modules import *
 
 start_time = utctime_now()
-sti_til_logfilområde = 'Logging'
+sti_til_logfilområde = 'logging'
 
 log_file = os.path.join(sti_til_logfilområde,  # folder with log files
                             '{}#{}#{}#{}_tuning.log'.format(

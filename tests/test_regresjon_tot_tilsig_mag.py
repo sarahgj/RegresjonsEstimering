@@ -5,7 +5,7 @@ from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 from pandas.util.testing import assert_frame_equal
 
-import regression_modules as reg
+from modules import regression_modules as reg
 
 
 @pytest.fixture
