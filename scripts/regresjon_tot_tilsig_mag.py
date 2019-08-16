@@ -4,12 +4,15 @@ import logging
 import os
 import traceback
 
-from modules.regression_modules import *
+from shyft.api import utctime_now  # To time the reading from SMG
+
+from modules import r2_and_regression as reg
+from modules import read_and_setup as rs
 
 start_time = utctime_now()
-sti_til_logfilområde = '../logging'
+logging_path = '../logging'
 
-log_file = os.path.join(sti_til_logfilområde,  # folder with log files
+log_file = os.path.join(logging_path,  # folder with log files
                             '{}#{}#{}#{}.log'.format(
                             os.path.splitext(os.path.basename(__file__))[0],  # script file name
                             socket.gethostname().lower(),  # host_name
@@ -23,10 +26,10 @@ logging.info('autojob started.')
 
 try:
     auto_input = {}
-    auto_input['tilsig'] = read_and_setup('tilsig')
-    auto_input['magasin'] = read_and_setup('magasin')
+    auto_input['tilsig'] = rs.read_and_setup('tilsig')
+    auto_input['magasin'] = rs.read_and_setup('magasin')
 
-    run_regression(auto_input)
+    reg.run_regression(auto_input)
     # def run_regression(auto_input,
     #               variables: list = ['magasin', 'tilsig'],
     #               regions: list = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'],

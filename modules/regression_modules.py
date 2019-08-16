@@ -3,22 +3,22 @@ import pandas as pd
 import time
 import pytz
 import math
-import numpy as np
 import matplotlib.pyplot as plt
 from pandas import Timedelta
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
-from shyft.api import utctime_now  # To time the reading from SMG
-import statsmodels.api as sm
-from statkraft.ssa.wrappers import ReadWrapper
 from statkraft.ssa.timeseriesrepository import TimeSeriesRepositorySmg
 from statkraft.ssa.environment import SMG_PROD
 from statkraft.ssa.adapter import ts_from_pandas_series
+from statkraft.ssa.wrappers import ReadWrapper
+from shyft.api import utctime_now  # To time the reading from SMG
 
+import modules.r2_and_regression as reg
 
-import import_from_SMG
+from imports import import_from_SMG
 from tests import import_from_SMG_test
+
 
 #Global variables
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now
@@ -30,11 +30,12 @@ columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samle
 first_period = 216  # Length of the long regression in weeks
 min_kandidater = 6
 
+
 ########################################################################################################################
-#                                        READ AND SETUP                                                                #
-#                                                                                                                      #
-#           Here series from SMG is read and the rime period etc is .                                                  #
+##                                READ ANS SETUP                                                                      ##
 ########################################################################################################################
+
+
 
 
 def read_and_setup(variable: str, test: str=False) -> [pd.DataFrame, list, ReadWrapper, str, str]:
@@ -189,17 +190,6 @@ def index2week(df, variable):
     return df_week
 
 
-def deletingNaNs(df):
-    """This function drops columns of a DataFrame (df) that has one or more NaNs."""
-    # start_ time.time()
-    df_old = df.copy()
-    df.dropna(axis=1, how='any', inplace=True)
-    for key in df_old:
-        if str(key) not in df:
-            print('Deleted ', key)
-    # end_time time.time()
-    #print('Time to run deletingNaNs: ', end_time - start_time)
-    return df
 
 
 def read_import_SMG(variable, list_dict, list_names, period):
@@ -207,9 +197,9 @@ def read_import_SMG(variable, list_dict, list_names, period):
 
     Args:
         variable: Either 'tilsig' or 'magasin' dependent on what regression the series to be read should be used for.
-        list_dict: A list of dictionaries containing the series to be read for the respective regression, and also 
+        list_dict: A list of dictionaries containing the series to be read for the respective regression, and also
         MagKap if needed (otherwise MagKap = 0).
-        list_names: A list of names of each dict in list_dict. It is used for printing aout the name for the dict of 
+        list_names: A list of names of each dict in list_dict. It is used for printing aout the name for the dict of
         series hvile read.
         period: Time period that the series should be read in for. This is the output of the function: get_timeperiods().
 
@@ -252,19 +242,59 @@ def read_import_SMG(variable, list_dict, list_names, period):
     return df, MagKap_dict
 
 
+def make_fasit(variable, region, reg_end, period):
+    fasit_key = make_fasit_key(variable, region)
+    fasit = period.read([fasit_key]).loc[:reg_end]
+    return fasit, fasit_key
 
-#################################################################################################################
-#####                               GENERAL METHODS                                                         #####
-#####-------------------------------------------------------------------------------------------------------#####
-#####                                                                                                       #####
-#################################################################################################################
+
+
+def make_fasit_key(variable, region):
+    if ('N' in region) and (variable == 'tilsig'):
+        fasit_key = '/Norg-No' + region[-1] + '.Fasit.....-U9100S0BT0105'
+    elif ('S' in region) and (variable == 'tilsig'):
+        fasit_key = '/Sver-Se' + region[-1] + '.Fasit.....-U9100S0BT0105'
+    elif ('N' in region) and (variable == 'magasin'):
+        fasit_key = '/Norg-NO' + region[-1] + '.Fasit.....-U9104A5R-0132'
+    elif ('S' in region) and (variable == 'magasin'):
+        fasit_key = '/Sver-SE' + region[-1] + '.Fasit.....-U9104A5R-0132'
+    else:
+        sys.exit("Could not make fasit_key from variable and region")
+    return fasit_key
+
+
+def get_input_variables_from_file(variable, region, backup=False, test=False):
+    if test:
+        if backup:
+            input_file = r'..\imports\input_variables_backup.txt'
+        else:
+            input_file = r'..\imports\input_variables_from_tuning.txt'
+    else:
+        if backup:
+            input_file = '..\imports\input_variables_backup.txt'
+        else:
+            input_file = '..\imports\input_variables_from_tuning.txt'
+    string2find = '{:3} {:7}'.format(region,variable)
+    with open(input_file,"r") as file:
+        for line in file:
+            if line.startswith(string2find):
+                max_p = float(line[12:17])
+                ant_kandidater: int = int(line[18:21])
+                reg_period: int =int(line[22:25])
+    return reg_period, max_p, ant_kandidater, input_file
+
+
+########################################################################################################################
+##                                R2 AND REGRESSION                                                                   ##
+########################################################################################################################
+
 
 def run_regression(auto_input,
-               variables: list = ['magasin', 'tilsig'],
-               regions: list = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'],
-               jupyter: bool = False,
-               backup: bool = False,
-               loop: bool = False) -> None:
+                   variables: list = ['magasin', 'tilsig'],
+                   regions: list = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'],
+                   jupyter: bool = False,
+                   backup: bool = False,
+                   loop: bool = False) -> None:
     """This function is the head function for the regression and it also deals with the outputs.
 
     Args:
@@ -347,7 +377,8 @@ def run_regression(auto_input,
                         chosen_r2 = sorted_r2
                     else:
                         chosen_r2 = sorted_r2[:antall]
-                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, first_period, max_p, chosen_r2, loop=True)
+                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, first_period, max_p, chosen_r2,
+                                           loop=True)
                     df_ant_kandidater = df_ant_kandidater.append(
                         {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
                          columns[4]: output[4], columns[5]: output[5], columns[6]: output[6]}, ignore_index=True)
@@ -364,7 +395,8 @@ def run_regression(auto_input,
                 for short_period in range(min_weeks, max_weeks + 1, 4):
                     short_period = int(short_period)
                     final_chosen_r2 = sorted_r2[:ant_kandidater_beste]
-                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p, final_chosen_r2, loop=True)
+                    output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p,
+                                           final_chosen_r2, loop=True)
                     df_short_period = df_short_period.append(
                         {columns[0]: output[0], columns[1]: output[1], columns[2]: output[2], columns[3]: output[3],
                          columns[4]: output[4], columns[5]: output[5], columns[6]: output[6]}, ignore_index=True)
@@ -378,13 +410,13 @@ def run_regression(auto_input,
                 ant_kandidater_beste = int(df_all_methods.ant_kandidater.values[idx_max])
                 chosen_r2_beste = sorted_r2[:ant_kandidater_beste]
                 short_period_beste = df_all_methods.short_period.values[idx_max]
-                write_input_variables_to_file(region, variable, max_p, ant_kandidater_beste, short_period_beste)
+                ws.write_input_variables_to_file(region, variable, max_p, ant_kandidater_beste, short_period_beste)
 
                 print('\nTuning for regionen tok %.0f minutter. \n' % ((utctime_now() - start_time_loop) / 60))
 
             else:
-                #getting the best variables from input_variables_from_tuning.txt or input_variables_backup.txr
-                short_period_beste, max_p, ant_kandidater_beste, input_file = get_input_variables_from_file(variable, region, backup)
+                # getting the best variables from input_variables_from_tuning.txt or input_variables_backup.txr
+                short_period_beste, max_p, ant_kandidater_beste, input_file = rs.get_input_variables_from_file(variable,region,backup)
                 chosen_r2_beste = sorted_r2[:ant_kandidater_beste]
                 print("Input variables was read from: ", input_file)
 
@@ -394,88 +426,25 @@ def run_regression(auto_input,
             input2 = fasit_key, ant_kandidater_beste, max_p, reg_end, read_start
 
             if not loop:
-                #Write results from the regression to SMG.
+                # Write results from the regression to SMG.
                 fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping = input1
 
                 # write to SMG:
-                write_SMG_regresjon(variable, region, tipping_df)
+                ws.write_SMG_regresjon(variable, region, tipping_df)
 
                 # write to SMG, virtual:
-                write_V_SMG_Regresjon(short_results, chosen_p, fasit_key, r2_modelled, MagKap)
+                ws.write_V_SMG_Regresjon(short_results, chosen_p, fasit_key, r2_modelled, MagKap)
 
             if jupyter:
-                show_result_jupyter(input1, input2)
+                ws.show_result_jupyter(input1, input2)
             else:
-                show_result(input1, input2)
+                ws.show_result(input1, input2)
 
     print('---------------------------------------------------------------')
     print('                         SLUTT                                 ')
     print('---------------------------------------------------------------')
     print('\nRegresjon for alle regioner og variabler brukte totalt %.0f minutter. \n' % (
-                (utctime_now() - start_tuning) / 60))
-
-
-
-
-def make_fasit_key(variable, region):
-    if ('N' in region) and (variable == 'tilsig'):
-        fasit_key = '/Norg-No' + region[-1] + '.Fasit.....-U9100S0BT0105'
-    elif ('S' in region) and (variable == 'tilsig'):
-        fasit_key = '/Sver-Se' + region[-1] + '.Fasit.....-U9100S0BT0105'
-    elif ('N' in region) and (variable == 'magasin'):
-        fasit_key = '/Norg-NO' + region[-1] + '.Fasit.....-U9104A5R-0132'
-    elif ('S' in region) and (variable == 'magasin'):
-        fasit_key = '/Sver-SE' + region[-1] + '.Fasit.....-U9104A5R-0132'
-    else:
-        sys.exit("Could not make fasit_key from variable and region")
-    return fasit_key
-
-
-def get_input_variables_from_file(variable, region, backup=False, test=False):
-    if test:
-        if backup:
-            input_file = r'..\input_variables_backup.txt'
-        else:
-            input_file = r'..\input_variables_from_tuning.txt'
-    else:
-        if backup:
-            input_file = 'input_variables_backup.txt'
-        else:
-            input_file = 'input_variables_from_tuning.txt'
-    string2find = '{:3} {:7}'.format(region,variable)
-    with open(input_file,"r") as file:
-        for line in file:
-            if line.startswith(string2find):
-                max_p = float(line[12:17])
-                ant_kandidater: int = int(line[18:21])
-                reg_period: int =int(line[22:25])
-    return reg_period, max_p, ant_kandidater, input_file
-
-
-
-def write_input_variables_to_file(region, variable, max_p, ant_kandidater, reg_period):
-    # start_ time.time()
-    output_file = 'input_variables_from_tuning.txt'
-    string2find = '{:3} {:7}'.format(region,variable)
-    with open(output_file,'r') as file:
-        data = file.readlines()
-        i = 0
-        for line in data:
-            if line.startswith(string2find):
-                now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
-                data[i] = '{:10s} {:5.3f} {:3d} {:3d} {}\n'.format(string2find, max_p, int(ant_kandidater), int(reg_period), now)
-                break
-            i +=1
-    with open(output_file, 'w') as file:
-        file.writelines(data)
-    # end_time time.time()
-    #print('Time to run write_input_variables_to_file: ',end_time-start_time)
-
-
-def make_fasit(variable, region, reg_end, period):
-    fasit_key = make_fasit_key(variable, region)
-    fasit = period.read([fasit_key]).loc[:reg_end]
-    return fasit, fasit_key
+            (utctime_now() - start_tuning) / 60))
 
 
 def calc_R2(Fasit, Model):
@@ -512,34 +481,40 @@ def get_R2_sorted(variable, df_cleaned, fasit, fasit_key):
     return sorted_r2
 
 
-
 def make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p, chosen_r2, loop=False):
     # start_ time.time()
     ant_kandidater = len(chosen_r2)
     df_tot = df_cleaned.join(fasit)
-  
+
     # Long Regression: for the whole period to pick out the best fitted series
     # Placing this outside the forecast loop means that you might get a bit wrong results, but it is unlikely,
     # and I therefore keep it here because of computational costs.
-    reg_end = (pd.to_datetime(time.strftime(last_forecast), format="%Y.%m.%d") - Timedelta(days=7)).strftime('%Y.%m.%d')  # 6*52
+    reg_end = (pd.to_datetime(time.strftime(last_forecast), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
+        '%Y.%m.%d')  # 6*52
     long_results, chosen_p, ant_break = regression(df_tot.loc[:reg_end], fasit_key, chosen_r2, max_p)
 
     #########################################################################################
-    #Forecast loop setup
+    # Forecast loop setup
     start_tipping = 7 * nb_weeks_tipping
-    reg_end_new = (pd.to_datetime(time.strftime(last_forecast), format="%Y.%m.%d") - Timedelta(days=start_tipping)).strftime('%Y.%m.%d') #6*52
+    reg_end_new = (pd.to_datetime(time.strftime(last_forecast), format="%Y.%m.%d") - Timedelta(
+        days=start_tipping)).strftime('%Y.%m.%d')  # 6*52
     forecast_time_new = True
     tipping_times = []
     tipping_values = []
     while forecast_time_new != last_forecast:
-        forecast_time_new = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime('%Y.%m.%d')
-        reg_start = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") - Timedelta(days=short_period * 7)).strftime('%Y.%m.%d')
+        forecast_time_new = (
+                    pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime(
+            '%Y.%m.%d')
+        reg_start = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") - Timedelta(
+            days=short_period * 7)).strftime('%Y.%m.%d')
         # Short Regression: for a short period defined by reg_start
         short_results, chosen_p, ant_break_short = regression(df_tot.loc[reg_start:reg_end_new], fasit_key, chosen_p, 1)
-        r2_modelled = calc_R2(df_tot.loc[reg_start:reg_end_new][fasit_key],short_results.predict(df_tot.loc[reg_start:reg_end_new][chosen_p]))
+        r2_modelled = calc_R2(df_tot.loc[reg_start:reg_end_new][fasit_key],
+                              short_results.predict(df_tot.loc[reg_start:reg_end_new][chosen_p]))
         ant_break_short += ant_break
         prediction = short_results.predict(df_cleaned[chosen_p]).loc[reg_end_new:forecast_time_new]
-        reg_end_new = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime('%Y.%m.%d')
+        reg_end_new = (pd.to_datetime(time.strftime(reg_end_new), format="%Y.%m.%d") + Timedelta(days=7)).strftime(
+            '%Y.%m.%d')
         tipping_times.append(prediction.index[-1])
         tipping_values.append(prediction[-1])
 
@@ -550,18 +525,17 @@ def make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max
     if loop:
         print(ant_kandidater, ant_serier, r2_modelled, r2_tippet, r_samlet, short_period, max_p)
         # end_time time.time()
-        #print('Time to run make_estimate_while_looping: ',end_time-start_time)
+        # print('Time to run make_estimate_while_looping: ',end_time-start_time)
         return ant_kandidater, ant_serier, r2_modelled, r2_tippet, r_samlet, short_period, max_p
     else:
         # end_time = time.time()
-        #print('Time to run make_estimate(no loop): ',end_time-start_time)
+        # print('Time to run make_estimate(no loop): ',end_time-start_time)
         return fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping
 
 
-
 def regression(df_tot, fasit_key, chosen, max_p):
-    """This function runs several regressions so that the optimal set of series in the result model are given in return. 
-    Each time the regression is run, the series with the highest (worst) p-value is dropped out of the chosen list, 
+    """This function runs several regressions so that the optimal set of series in the result model are given in return.
+    Each time the regression is run, the series with the highest (worst) p-value is dropped out of the chosen list,
     until the highest p in p-values in the results equal max_p, or only 6 series are left.
     Args:
         df_tot: A DataFrame with the series used for the regression.
@@ -573,15 +547,15 @@ def regression(df_tot, fasit_key, chosen, max_p):
         results: The results of the final regression.
         chosen_p: A list of keys of the final chosen set of timeseries for the regression model.
         ant_break: 1 if the loop picking out p-values stopped because of minimum number of series limit."""
-    
+
     # First regression
     first_model = sm.OLS(df_tot[fasit_key], df_tot[chosen])
-    
+
     # Initializing loop
     results = first_model.fit()
     chosen_p = chosen.copy()
     ant_break = 0
-    
+
     # Looping through until final model is chosen
     while max(results.pvalues) > max_p or len(results.pvalues) >= max_final_numb_kandidater:
         if len(results.pvalues) <= min_kandidater:
@@ -589,39 +563,50 @@ def regression(df_tot, fasit_key, chosen, max_p):
             break
         chosen_p.remove(results.pvalues.idxmax())  # updating the chosen list
         results = sm.OLS(df_tot[fasit_key], df_tot[chosen_p]).fit()  # regression
-        
+
     return results, chosen_p, ant_break
 
 
-#################################################################################################################
-#####                               GENERAL METHODS                                                         #####
-#####-------------------------------------------------------------------------------------------------------#####
-#####                                                                                                       #####
-#################################################################################################################
+def deletingNaNs(df):
+    """This function drops columns of a DataFrame (df) that has one or more NaNs."""
+    # start_ time.time()
+    df_old = df.copy()
+    df.dropna(axis=1, how='any', inplace=True)
+    for key in df_old:
+        if str(key) not in df:
+            print('Deleted ', key)
+    # end_time time.time()
+    #print('Time to run deletingNaNs: ', end_time - start_time)
+    return df
+
+
+
+########################################################################################################################
+##                                WRITE AND SHOW                                                                      ##
+########################################################################################################################
+
 
 
 def show_result(input1, input2, variable_file=False):
     """This function prints out and plots the results from the regression."""
     fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping = input1
     fasit_key, ant_kandidater, max_p, reg_end, read_start = input2
-    # start_ time.time()
     plt.interactive(False)
-    reg_start = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") - Timedelta(days=short_period * 7)).strftime('%Y.%m.%d')
+    reg_start = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") - Timedelta(days=short_period * 7)).strftime(
+        '%Y.%m.%d')
     print('\n-----------------------------------------------------------------------')
     print('RESULTATER FOR %s\n' % fasit_key)
     print('Regresjonsperiode fra: %s til: %s.' % (reg_start, reg_end))
     if variable_file:
-        print('Input variablene (reg_period og ant_kandidater) ble hentet fra: ',variable_file)
+        print('Input variablene (reg_period og ant_kandidater) ble hentet fra: ', variable_file)
     else:
         print('Input variablene (reg_period og ant_kandidater) ble funnet ved tuning.')
     print('Valgte %.2f kandidater til regresjonen utifra korrelasjon med fasitserien.' % (ant_kandidater))
     print('Valgte så ut de med p-value < %.5f, som var %i stk.' % (max_p, len(long_results.pvalues)))
     print('R2 for regresjonen (kort periode): %.5f' % r2_modelled)
-    print('R2 mellom fasit og tipping: %.5f\n' % (calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])))
+    print('R2 mellom fasit og tipping: %.5f\n' % (reg.calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])))
     print('Fasit:\n', fasit[fasit_key][-4:])
     print('\nModdelert/Tippet:\n', tipping_df[-5:])
-    # end_time time.time()
-    #print('Time to run show_result: ',end_time-start_time)
 
 
 def show_result_jupyter(input1, input2, variable_file=False):
@@ -629,19 +614,21 @@ def show_result_jupyter(input1, input2, variable_file=False):
     fasit_key, ant_kandidater, max_p, reg_end, read_start = input2
     """This function prints out and plots the results from the regression."""
     plt.interactive(False)
-    reg_start = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") - Timedelta(days=short_period * 7)).strftime('%Y.%m.%d')
+    reg_start = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") - Timedelta(days=short_period * 7)).strftime(
+        '%Y.%m.%d')
     print('\n-----------------------------------------------------------------------')
     print('RESULTATER FOR %s\n' % fasit_key)
     print('Regresjonsperiode brukt til setup for siste tipping: %s til: %s.' % (read_start, reg_end))
     if variable_file:
-        print('Input variablene (reg_period og ant_kandidater) ble hentet fra: ',variable_file)
+        print('Input variablene (reg_period og ant_kandidater) ble hentet fra: ', variable_file)
     else:
         print('Input variablene (reg_period og ant_kandidater) ble funnet ved tuning.')
-    print('Regresjonsperiode brukt på modellen for siste tipping: %s til: %s, satt til %d uker.' % (reg_start, reg_end, int(short_period)))
-    print('Valgte %d kandidater til regresjonen utifra korrelasjon med fasitserien.'%(int(ant_kandidater)))
+    print('Regresjonsperiode brukt på modellen for siste tipping: %s til: %s, satt til %d uker.' % (
+    reg_start, reg_end, int(short_period)))
+    print('Valgte %d kandidater til regresjonen utifra korrelasjon med fasitserien.' % (int(ant_kandidater)))
     print('Valgte så ut de med p-value < %.5f, som var %i stk.' % (max_p, len(long_results.pvalues)))
     print('R2 for regresjonen (kort periode): %.5f' % r2_modelled)
-    print('R2 mellom fasit og tipping: %.5f\n'%(calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])))
+    print('R2 mellom fasit og tipping: %.5f\n' % (reg.calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])))
     print('Fasit:\n', fasit[fasit_key][-4:])
     print('\nModdelert/Tippet:\n', tipping_df[-5:])
     if fasit_key[-3:] == '105':
@@ -650,16 +637,19 @@ def show_result_jupyter(input1, input2, variable_file=False):
         color_tipping = 'lightblue'
     else:
         sys.exit("The fasit key should end with 105 or 132")
-    
-    # Plot with regression:    
+
+    # Plot with regression:
     plt.figure(figsize=(16, 10))
     if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
         plt.plot(fasit[fasit_key].loc[:reg_end], color='k', linewidth=2.0, label='fasit')
     else:
         plt.plot(fasit[fasit_key].loc[:], color='k', linewidth=2.0, label='fasit')
-    plt.plot(short_results.predict(df_tot[chosen_p].loc[reg_start:reg_end]), color='orange', label='regresjon på historie(kort periode)')
-    plt.plot(long_results.predict(df_tot[chosen_p].loc[:reg_start]), color='cyan', label='regresjon på historie (lang periode)')
-    plt.plot(short_results.predict(df_tot[chosen_p].loc[:reg_start]), color='deeppink', label='modell på historie (kort periode)')
+    plt.plot(short_results.predict(df_tot[chosen_p].loc[reg_start:reg_end]), color='orange',
+             label='regresjon på historie(kort periode)')
+    plt.plot(long_results.predict(df_tot[chosen_p].loc[:reg_start]), color='cyan',
+             label='regresjon på historie (lang periode)')
+    plt.plot(short_results.predict(df_tot[chosen_p].loc[:reg_start]), color='deeppink',
+             label='modell på historie (kort periode)')
     plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
     plt.title('Regresjon for: %s' % fasit_key)
     plt.legend()
@@ -680,7 +670,7 @@ def show_result_jupyter(input1, input2, variable_file=False):
     for key in chosen_p:
         if fasit_key[-3:] == '105':
             sfac = df_tot[fasit_key].mean() / df_tot[key].mean()
-            plt.plot(df_tot[key]* sfac)  # , marker='o')
+            plt.plot(df_tot[key] * sfac)  # , marker='o')
         elif fasit_key[-3:] == '132':
             plt.plot(df_tot[key])  # , marker='o')
     plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
@@ -691,6 +681,7 @@ def show_result_jupyter(input1, input2, variable_file=False):
 
 def write_SMG_regresjon(variable, region, df):
     """This function writes pandas series (df) to smg series (ts) chosen according to the chosen region."""
+    global ts
     smg = TimeSeriesRepositorySmg(SMG_PROD)
 
     # define ts to write to
@@ -743,7 +734,8 @@ def write_V_SMG_Regresjon(results, chosen_p, fasit_key, r2_modelled, MagKap_mag=
         for tall, serie, vekt in sorted(zip(range(len(chosen_p)), chosen_p, results.params)):
             serie = "@TRANSFORM(%'{}','WEEK','SUM')".format(serie)
             expression += (str((vekt_serie.format(tall=tall + 1, serie=serie, vekt=vekt))))
-        expression += str(sum_av_vekter.format(alle_vekter='F' + '+F'.join([str(tall + 1) for tall in range(len(chosen_p))])))
+        expression += str(
+            sum_av_vekter.format(alle_vekter='F' + '+F'.join([str(tall + 1) for tall in range(len(chosen_p))])))
         expression += '\n@SET_TS_VALUNIT(##,105)'
         if 'No' in region:
             ts = 'RegresjonTilsigNO' + region[-1] + '.-U9100S0BT0105'
@@ -753,11 +745,26 @@ def write_V_SMG_Regresjon(results, chosen_p, fasit_key, r2_modelled, MagKap_mag=
     smg = TimeSeriesRepositorySmg(SMG_PROD)
     print('Skriver formel for siste regresjon til: ', ts)
     info = smg.get_meta_info_by_name([ts])
-    #print('-----------------------------------------------------------------------')
-    #print(expression)
-    #print('-----------------------------------------------------------------------')
+    # print('-----------------------------------------------------------------------')
+    # print(expression)
+    # print('-----------------------------------------------------------------------')
     smg.update_virtual({info[0]: expression})
     end_time = time.time()
-    print('Time to run write_V_SMG_Regresjon: ',end_time-start_time)
+    print('Time to run write_V_SMG_Regresjon: ', end_time - start_time)
 
 
+
+def write_input_variables_to_file(region, variable, max_p, ant_kandidater, reg_period):
+    output_file = '../imports/input_variables_from_tuning.txt'
+    string2find = '{:3} {:7}'.format(region, variable)
+    with open(output_file, 'r') as file:
+        data = file.readlines()
+        i = 0
+        for line in data:
+            if line.startswith(string2find):
+                now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
+                data[i] = '{:10s} {:5.3f} {:3d} {:3d} {}\n'.format(string2find, max_p, int(ant_kandidater), int(reg_period), now)
+                break
+            i += 1
+    with open(output_file, 'w') as file:
+        file.writelines(data)
