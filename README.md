@@ -11,4 +11,4 @@ to mach the inflow and magazine Fasit series.
    2. Run scripts/regresjon_tot_tilsig_mag.py to update the new tuning results with SMG.
 
 Author: Sarah Gjermo <sarah.gjermo@statkraft.com> \
-On behalf of: Svein Farstad <svein.farstad@statkraft.com>
+On behalf of: Svein Farstad <sveinedmund.farstad@statkraft.com>

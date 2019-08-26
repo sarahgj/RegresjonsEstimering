@@ -22,7 +22,7 @@ from tests import import_from_SMG_test
 
 #Global variables
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now
-max_final_numb_kandidater = 25
+max_final_numb_kandidater = 30
 max_input_series = 196
 nb_weeks_tipping = 10  # number of weeks to do tipping back in time
 tz = pytz.timezone('Etc/GMT-1')
@@ -332,16 +332,16 @@ def run_regression(auto_input,
 
         if loop:
             if variable == 'tilsig':
-                print('---------------------------------------------------------------')
+                print('\n\n---------------------------------------------------------------')
                 print('                        TILSIG                                 ')
-                print('---------------------------------------------------------------')
+                print('---------------------------------------------------------------\n')
                 max_kandidater = 196
                 min_kandidater = 5
 
             else:
-                print('---------------------------------------------------------------')
+                print('\n\n---------------------------------------------------------------')
                 print('                        MAGASIN                                ')
-                print('---------------------------------------------------------------')
+                print('---------------------------------------------------------------\n')
                 max_kandidater = 135
                 min_kandidater = 5
 
@@ -548,21 +548,24 @@ def regression(df_tot, fasit_key, chosen, max_p):
         chosen_p: A list of keys of the final chosen set of timeseries for the regression model.
         ant_break: 1 if the loop picking out p-values stopped because of minimum number of series limit."""
 
-    # First regression
-    first_model = sm.OLS(df_tot[fasit_key], df_tot[chosen])
+    # Ignoring: RuntimeWarning: divide by zero encountered in double_scalars
+    with NP.errstate(divide='ignore',invalid='ignore'): 
+        
+        # First regression
+        first_model = sm.OLS(df_tot[fasit_key], df_tot[chosen])
 
-    # Initializing loop
-    results = first_model.fit()
-    chosen_p = chosen.copy()
-    ant_break = 0
+        # Initializing loop
+        results = first_model.fit()
+        chosen_p = chosen.copy()
+        ant_break = 0
 
-    # Looping through until final model is chosen
-    while max(results.pvalues) > max_p or len(results.pvalues) >= max_final_numb_kandidater:
-        if len(results.pvalues) <= min_kandidater:
-            ant_break = 1  # count
-            break
-        chosen_p.remove(results.pvalues.idxmax())  # updating the chosen list
-        results = sm.OLS(df_tot[fasit_key], df_tot[chosen_p]).fit()  # regression
+        # Looping through until final model is chosen
+        while max(results.pvalues) > max_p or len(results.pvalues) >= max_final_numb_kandidater:
+            if len(results.pvalues) <= min_kandidater:
+                ant_break = 1  # count
+                break
+            chosen_p.remove(results.pvalues.idxmax())  # updating the chosen list
+            results = sm.OLS(df_tot[fasit_key], df_tot[chosen_p]).fit()  # regression
 
     return results, chosen_p, ant_break
 
