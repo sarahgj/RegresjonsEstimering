@@ -6,8 +6,8 @@ import traceback
 
 from shyft.api import utctime_now  # To time the reading from SMG
 
-import r2_and_regression as reg
-import read_and_setup as rs
+from modules import r2_and_regression as reg
+from modules import read_and_setup as rs
 
 start_time = utctime_now()
 logging_path = '../logging'

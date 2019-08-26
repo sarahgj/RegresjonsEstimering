@@ -259,7 +259,7 @@ def make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max
     r_samlet = (r2_modelled * 0.5 + r2_tippet * 0.5)
     ant_serier = len(chosen_p)
     if loop:
-        print(ant_kandidater, ant_serier, r2_modelled, r2_tippet, r_samlet, short_period, max_p)
+        #print(ant_kandidater, ant_serier, r2_modelled, r2_tippet, r_samlet, short_period, max_p)
         # end_time time.time()
         # print('Time to run make_estimate_while_looping: ',end_time-start_time)
         return ant_kandidater, ant_serier, r2_modelled, r2_tippet, r_samlet, short_period, max_p
