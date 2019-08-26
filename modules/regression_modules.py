@@ -23,7 +23,7 @@ from tests import import_from_SMG_test
 #Global variables
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now
 max_final_numb_kandidater = 30
-max_input_series = 196
+max_input_series = 296
 nb_weeks_tipping = 10  # number of weeks to do tipping back in time
 tz = pytz.timezone('Etc/GMT-1')
 columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samlet', 'short_period', 'max_p']
