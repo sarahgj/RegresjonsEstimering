@@ -29,13 +29,14 @@ try:
     auto_input['tilsig'] = rs.read_and_setup('tilsig')
     auto_input['magasin'] = rs.read_and_setup('magasin')
 
-    reg.run_regression(auto_input, loop=True)
+    reg.run_regression(auto_input, loop=True, write=True)
     # def run_regression(auto_input,
     #               variables: list = ['magasin', 'tilsig'],
     #               regions: list = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'],
     #               jupyter: bool = False,
     #               backup: bool = False,
-    #               loop: bool = False) -> None:
+    #               loop: bool = False,
+    #               write: bool = True) -> None:
 
     logging.info(
         '\nThe script ran successfully and used a total of %.0f minutes\n' % ((utctime_now() - start_time) / 60))

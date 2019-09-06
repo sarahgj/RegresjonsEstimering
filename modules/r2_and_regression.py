@@ -30,7 +30,8 @@ def run_regression(auto_input,
                    regions: list = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'],
                    jupyter: bool = False,
                    backup: bool = False,
-                   loop: bool = False) -> None:
+                   loop: bool = False,
+                   write: bool = True) -> None:
     """This function is the head function for the regression and it also deals with the outputs.
 
     Args:
@@ -50,48 +51,44 @@ def run_regression(auto_input,
 
     start_tuning = utctime_now()
 
-    for variable in variables:
+    for region in regions:
 
-        if not variable in ['magasin', 'tilsig']:
-            sys.exit("Variable must be either 'tilsig' or 'magasin'")
+        if not region in ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']:
+            sys.exit("Region must one out of: 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'")
 
-        df_week, MagKap, period, forecast_time, read_start = auto_input[variable]
-        reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
-            '%Y.%m.%d')
+        for variable in variables:
 
-        if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
-            last_forecast = forecast_time
-        else:
-            last_forecast = reg_end
+            if not variable in ['magasin', 'tilsig']:
+                sys.exit("Variable must be either 'tilsig' or 'magasin'")
 
-        df_cleaned = deletingNaNs(df_week.loc[:last_forecast])
+            print('---------------------------------------------------------------')
+            print('                          {}, {}                                  '.format(region, variable))
+            print('---------------------------------------------------------------')
 
-        if loop:
-            if variable == 'tilsig':
-                print('---------------------------------------------------------------')
-                print('                        TILSIG                                 ')
-                print('---------------------------------------------------------------')
-                max_kandidater = 196
-                min_kandidater = 1
+            df_week, MagKap, period, forecast_time, read_start = auto_input[variable]
+            reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
+                '%Y.%m.%d')
 
+            if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
+                last_forecast = forecast_time
             else:
-                print('---------------------------------------------------------------')
-                print('                        MAGASIN                                ')
-                print('---------------------------------------------------------------')
-                max_kandidater = 171
-                min_kandidater = 1
+                last_forecast = reg_end
 
-            max_weeks = 288
-            min_weeks = 11
-            print('max ant. kandidater: {}, min ant. kandidater: {}'.format(max_kandidater, min_kandidater))
-            print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
+            df_cleaned = deletingNaNs(df_week.loc[:last_forecast])
 
-        for region in regions:
-            print('---------------------------------------------------------------')
-            print('                          {}                                  '.format(region))
-            print('---------------------------------------------------------------')
-            if not region in ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']:
-                sys.exit("Region must one out of: 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'")
+            if loop:
+                if variable == 'tilsig':
+                    max_kandidater = 196
+                    min_kandidater = 1
+
+                else:
+                    max_kandidater = 171
+                    min_kandidater = 1
+
+                max_weeks = 288
+                min_weeks = 11
+                print('max ant. kandidater: {}, min ant. kandidater: {}'.format(max_kandidater, min_kandidater))
+                print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
 
             start_time_loop = utctime_now()
             fasit, fasit_key = rs.make_fasit(variable, region, reg_end, period)
@@ -156,12 +153,14 @@ def run_regression(auto_input,
                 chosen_r2_beste = sorted_r2[:ant_kandidater_beste]
                 print("Input variables was read from: ", input_file)
 
-            # Show results
+            # SHOW RESULTS
             input1 = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period_beste, max_p,
                                    chosen_r2_beste, loop=False)
             input2 = fasit_key, ant_kandidater_beste, max_p, reg_end, read_start
 
-            if not loop:
+
+            #WRITE RESULTS
+            if write:
                 # Write results from the regression to SMG.
                 fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping = input1
 
@@ -284,8 +283,9 @@ def regression(df_tot, fasit_key, chosen, max_p):
         chosen_p: A list of keys of the final chosen set of timeseries for the regression model.
         ant_break: 1 if the loop picking out p-values stopped because of minimum number of series limit."""
 
-    # First regression
-    first_model = sm.OLS(df_tot[fasit_key], df_tot[chosen])
+    with np.errstate(divide='ignore'):
+        # First regression
+        first_model = sm.OLS(df_tot[fasit_key], df_tot[chosen])
 
     # Initializing loop
     results = first_model.fit()
@@ -298,7 +298,9 @@ def regression(df_tot, fasit_key, chosen, max_p):
             ant_break = 1  # count
             break
         chosen_p.remove(results.pvalues.idxmax())  # updating the chosen list
-        results = sm.OLS(df_tot[fasit_key], df_tot[chosen_p]).fit()  # regression
+
+        with np.errstate(divide='ignore'):
+            results = sm.OLS(df_tot[fasit_key], df_tot[chosen_p]).fit()  # regression
 
     return results, chosen_p, ant_break
 
