@@ -18,10 +18,10 @@ from modules import write_and_show as ws
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now
 max_final_numb_kandidater = 20 #25
 max_input_series = 496 #196
-nb_weeks_tipping = 10  # number of weeks to do tipping back in time
+nb_weeks_tipping = 5  # number of weeks to do tipping back in time
 tz = pytz.timezone('Etc/GMT-1')
 columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samlet', 'short_period', 'max_p']
-first_period = 219 #219  # Length of the long regression in weeks
+first_period = 220 #219  # Length of the long regression in weeks
 min_kandidater = 1
 
 
@@ -85,7 +85,7 @@ def run_regression(auto_input,
                     max_kandidater = 171
                     min_kandidater = 1
 
-                max_weeks = 219 #288
+                max_weeks = 220 #288
                 min_weeks = 11
                 print('max ant. kandidater: {}, min ant. kandidater: {}'.format(max_kandidater, min_kandidater))
                 print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
