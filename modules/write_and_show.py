@@ -26,7 +26,7 @@ today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M",
 
 def show_result(input1, input2, variable_file=False):
     """This function prints out and plots the results from the regression."""
-    fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping = input1
+    fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_ps, short_period, nb_weeks_tipping = input1
     fasit_key, ant_kandidater, max_p, reg_end, read_start = input2
     plt.interactive(False)
     reg_start = (pd.to_datetime(time.strftime(reg_end), format="%Y.%m.%d") - Timedelta(days=short_period * 7)).strftime(
@@ -41,13 +41,13 @@ def show_result(input1, input2, variable_file=False):
     print('Valgte %.2f kandidater til regresjonen utifra korrelasjon med fasitserien.' % (ant_kandidater))
     print('Valgte så ut de med p-value < %.5f, som var %i stk.' % (max_p, len(long_results.pvalues)))
     print('R2 for regresjonen (kort periode): %.5f' % r2_modelled)
-    print('R2 mellom fasit og tipping: %.5f\n' % (reg.calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])))
+    print('R2 mellom fasit og tipping: %.5f\n' % (reg.calc_R2(fasit[fasit_key].loc[tipping_ps.index[0]:], tipping_ps[:fasit[fasit_key].index[-1]])))
     print('Fasit:\n', fasit[fasit_key][-4:])
-    print('\nModdelert/Tippet:\n', tipping_df[-5:])
+    print('\nModdelert/Tippet:\n', tipping_ps[-5:])
 
 
 def show_result_jupyter(input1, input2, variable_file=False):
-    fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping = input1
+    fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_ps, short_period, nb_weeks_tipping = input1
     fasit_key, ant_kandidater, max_p, reg_end, read_start = input2
     """This function prints out and plots the results from the regression."""
     plt.interactive(False)
@@ -65,9 +65,9 @@ def show_result_jupyter(input1, input2, variable_file=False):
     print('Valgte %d kandidater til regresjonen utifra korrelasjon med fasitserien.' % (int(ant_kandidater)))
     print('Valgte så ut de med p-value < %.5f, som var %i stk.' % (max_p, len(long_results.pvalues)))
     print('R2 for regresjonen (kort periode): %.5f' % r2_modelled)
-    print('R2 mellom fasit og tipping: %.5f\n' % (reg.calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])))
+    print('R2 mellom fasit og tipping: %.5f\n' % (reg.calc_R2(fasit[fasit_key].loc[tipping_ps.index[0]:], tipping_ps[:fasit[fasit_key].index[-1]])))
     print('Fasit:\n', fasit[fasit_key][-4:])
-    print('\nModdelert/Tippet:\n', tipping_df[-5:])
+    print('\nModdelert/Tippet:\n', tipping_ps[-5:])
     if fasit_key[-3:] == '105':
         color_tipping = 'blue'
     elif fasit_key[-3:] == '132':
@@ -87,17 +87,17 @@ def show_result_jupyter(input1, input2, variable_file=False):
              label='regresjon på historie (lang periode)')
     plt.plot(short_results.predict(df_tot[chosen_p].loc[:reg_start]), color='deeppink',
              label='modell på historie (kort periode)')
-    plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
+    plt.plot(tipping_ps, label='tipping', color=color_tipping)  # , marker='o')
     plt.title('Regresjon for: %s' % fasit_key)
     plt.legend()
 
     # Plot just prediction:
     plt.figure(figsize=(16, 10))
     if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
-        plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:], color='k', linewidth=2.0, label='fasit')
+        plt.plot(fasit[fasit_key].loc[tipping_ps.index[0]:], color='k', linewidth=2.0, label='fasit')
     else:
-        plt.plot(fasit[fasit_key].loc[tipping_df.index[0]:reg_end], color='k', linewidth=2.0, label='fasit')
-    plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
+        plt.plot(fasit[fasit_key].loc[tipping_ps.index[0]:reg_end], color='k', linewidth=2.0, label='fasit')
+    plt.plot(tipping_ps, label='tipping', color=color_tipping)  # , marker='o')
     plt.title('Tipping for: %s' % fasit_key)
     plt.legend()
 
@@ -110,14 +110,14 @@ def show_result_jupyter(input1, input2, variable_file=False):
             plt.plot(df_tot[key] * sfac)  # , marker='o')
         elif fasit_key[-3:] == '132':
             plt.plot(df_tot[key])  # , marker='o')
-    plt.plot(tipping_df, label='tipping', color=color_tipping)  # , marker='o')
+    plt.plot(tipping_ps, label='tipping', color=color_tipping)  # , marker='o')
     plt.title('Regresjonsserier for: %s' % fasit_key)
     plt.legend()
     plt.show()
 
 
-def write_SMG_regresjon(variable, region, df):
-    """This function writes pandas series (df) to smg series (ts) chosen according to the chosen region."""
+def write_SMG_regresjon(variable, region, ps):
+    """This function writes pandas series (pandas series) to smg series (ts) chosen according to the chosen region."""
     global ts
     smg = TimeSeriesRepositorySmg(SMG_PROD)
 
@@ -130,12 +130,14 @@ def write_SMG_regresjon(variable, region, df):
 
     # get metainfo from ts
     minfo = smg.get_meta_info_by_name([ts])
-
+    
     # we need to attach meta information to the Pandas series since it is needed to create the TimeSeries object
-    df.meta_info = minfo[0]
+    ps.meta_info = minfo[0]
+    print(ps)
+    print(ps[-1])
 
     # convert the Pandas series to a time series
-    time_series_to_write = ts_from_pandas_series(df, filter_out_nans=True)
+    time_series_to_write = ts_from_pandas_series(ps, filter_out_nans=True)
 
     # writing
     result = smg.write([time_series_to_write])

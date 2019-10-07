@@ -1,6 +1,7 @@
 import sys
 import pandas as pd
 import time
+import datetime as dt
 import pytz
 import math
 from pandas import Timedelta
@@ -22,7 +23,7 @@ tz = pytz.timezone('Etc/GMT-1')
 #first_period = 216  # Length of the long regression in weeks
 #min_kandidater = 6
 
-def read_and_setup(variable: str, test: str=False) -> [pd.DataFrame, list, ReadWrapper, str, str]:
+def read_and_setup(variable: str, test: str = False) -> [pd.DataFrame, list]:
     """This function is the head function for reading and setting up the series used for the regression
 
     Args:
@@ -39,7 +40,7 @@ def read_and_setup(variable: str, test: str=False) -> [pd.DataFrame, list, ReadW
         >> df_week, MagKap, period, forecast_time, read_start = read_and_setup('tilsig')
     """
 
-    period, forecast_time, read_start = get_timeperiods(variable, test)
+    period, forecast_time, read_start = get_timeperiods(variable)
 
     if variable == 'tilsig':
         print('---------------------------------------------------------------')
@@ -74,10 +75,10 @@ def read_and_setup(variable: str, test: str=False) -> [pd.DataFrame, list, ReadW
             print(df_week[key].loc[forecast_time], key)
             first_true = False
     print('\n\n')
-    return df_week, MagKap_list, period, forecast_time, read_start
+    return df_week, MagKap_list
 
 
-def get_timeperiods(variable: str, test: str = False) -> [ReadWrapper, str, str]:
+def get_timeperiods(variable: str, week_nb: int = False, year: int =  False, test: str = False) -> [ReadWrapper, str, str]:
     """This function finds what day it is today and chooses from that information the end of the regression
     and the time period of which the series should be read. It is used for read_and_setup().
 
@@ -89,40 +90,35 @@ def get_timeperiods(variable: str, test: str = False) -> [ReadWrapper, str, str]
         forecast_time: Time of last forecast
         read_start: start time of the regression on the period etc
     """
+    
     if test == 'mandag':
         now = pd.to_datetime("2019.06.24 11:00", format="%Y.%m.%d %H:%M", errors='ignore')
     elif test == 'onsdag':
         now = pd.to_datetime("2019.06.27 14:00", format="%Y.%m.%d %H:%M", errors='ignore')
     else:
         now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
+    
+    if not week_nb:
+        week_nb = int(now.strftime("%V"))
+        year = int(now.strftime("%Y"))
 
+    year_week = "{}-W{}".format(year,week_nb-1)
+    week_monday = dt.datetime.strptime(year_week + '-1', "%Y-W%W-%w")
+    
     read_start = '2015.06.08'
-    read_end = now + Timedelta(days=7)
+    read_end = week_monday + Timedelta(days=7)
 
     # getting the period from the ReadWrapper from statkraft.ssa.wrappers
     period = ReadWrapper(start_time=read_start, end_time=read_end, read_from='SMG_PROD', tz=tz)
 
-    # The fasit value (unknown) appears on wednesday 14 o'clock limiting the end time of the regression.
-    # The forecast time is the time of the last true value of kjente magasin and tilsig.
-    if (0 <= now.weekday() <= 1) or (now.weekday() == 2 and now.hour < 14):  # before wednesday 2pm
-        # Since we get the values for the tilsig series one week later than the magasin series, some adjustment
-        # is necessary.
-        if variable == 'tilsig':
-            reg_mandag = now - Timedelta(days=now.weekday()) - Timedelta(days=14)
-        else:
-            reg_mandag = now - Timedelta(days=now.weekday()) - Timedelta(days=7)
+    if variable == 'tilsig':
+        forecast_time = (week_monday - Timedelta(days=7)).strftime('%Y.%m.%d')
     else:
-        if variable == 'tilsig':
-            reg_mandag = now - Timedelta(days=now.weekday()) - Timedelta(days=7)
-        else:
-            reg_mandag = now - Timedelta(days=now.weekday())
-    # calculating forecast time and start of regression
-    if (0 <= now.weekday() <= 1) or (now.weekday() == 2 and now.hour < 14):  # before wednesday 2pm
-        forecast_time = (reg_mandag + Timedelta(days=7)).strftime('%Y.%m.%d')
-    else:
-        forecast_time = reg_mandag.strftime('%Y.%m.%d')
-
+        forecast_time = (week_monday.strftime('%Y.%m.%d'))
+    
     return period, forecast_time, read_start
+
+
 
 def GWh2percentage(df, MagKap):
     """This function converts from GWh to percentage magasinfylling.
@@ -140,6 +136,7 @@ def GWh2percentage(df, MagKap):
     # end_time time.time()
     #print('Time to run GWh2percentage: ', end_time - start_time)
     return df
+
 
 
 def index2week(df, variable):

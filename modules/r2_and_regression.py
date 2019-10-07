@@ -31,7 +31,9 @@ def run_regression(auto_input,
                    jupyter: bool = False,
                    backup: bool = False,
                    loop: bool = False,
-                   write: bool = True) -> None:
+                   write: bool = True,
+                   week_nb: int = False,
+                  year: int = False) -> None:
     """This function is the head function for the regression and it also deals with the outputs.
 
     Args:
@@ -54,7 +56,7 @@ def run_regression(auto_input,
     for region in regions:
 
         if not region in ['NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4']:
-            sys.exit("Region must one out of: 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'")
+            sys.exit("Region must be one out of: 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4'")
 
         for variable in variables:
 
@@ -65,14 +67,19 @@ def run_regression(auto_input,
             print('                          {}, {}                                  '.format(region, variable))
             print('---------------------------------------------------------------')
 
-            df_week, MagKap, period, forecast_time, read_start = auto_input[variable]
+            
+            
+            df_week, MagKap = auto_input[variable]
+            
+            period, forecast_time, read_start = rs.get_timeperiods(variable, week_nb, year)
+            
             reg_end = (pd.to_datetime(time.strftime(forecast_time), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
                 '%Y.%m.%d')
 
             if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
                 last_forecast = forecast_time
             else:
-                last_forecast = reg_end
+                last_forecast = forecast_time
 
             df_cleaned = deletingNaNs(df_week.loc[:last_forecast])
 
@@ -162,10 +169,10 @@ def run_regression(auto_input,
             #WRITE RESULTS
             if write:
                 # Write results from the regression to SMG.
-                fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping = input1
+                fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_ps, short_period, nb_weeks_tipping = input1
 
                 # write to SMG:
-                ws.write_SMG_regresjon(variable, region, tipping_df)
+                ws.write_SMG_regresjon(variable, region, tipping_ps[-1:])
 
                 # write to SMG, virtual:
                 ws.write_V_SMG_Regresjon(short_results, chosen_p, fasit_key, r2_modelled, MagKap)
@@ -253,8 +260,8 @@ def make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max
         tipping_times.append(prediction.index[-1])
         tipping_values.append(prediction[-1])
 
-    tipping_df = pd.Series(tipping_values, index=tipping_times)
-    r2_tippet = calc_R2(fasit[fasit_key].loc[tipping_df.index[0]:], tipping_df[:fasit[fasit_key].index[-1]])
+    tipping_ps = pd.Series(tipping_values, index=tipping_times)
+    r2_tippet = calc_R2(fasit[fasit_key].loc[tipping_ps.index[0]:], tipping_ps[:fasit[fasit_key].index[-1]])
     r_samlet = (r2_modelled * 0.5 + r2_tippet * 0.5)
     ant_serier = len(chosen_p)
     if loop:
@@ -265,7 +272,7 @@ def make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max
     else:
         # end_time = time.time()
         # print('Time to run make_estimate(no loop): ',end_time-start_time)
-        return fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_df, short_period, nb_weeks_tipping
+        return fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_ps, short_period, nb_weeks_tipping
 
 
 def regression(df_tot, fasit_key, chosen, max_p):
