@@ -106,7 +106,7 @@ def get_timeperiods(variable: str, week_nb: int = False, year: int =  False, tes
     week_monday = dt.datetime.strptime(year_week + '-1', "%Y-W%W-%w")
     
     read_start = '2015.06.08'
-    read_end = week_monday + Timedelta(days=7)
+    read_end = now + Timedelta(days=7)
 
     # getting the period from the ReadWrapper from statkraft.ssa.wrappers
     period = ReadWrapper(start_time=read_start, end_time=read_end, read_from='SMG_PROD', tz=tz)

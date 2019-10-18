@@ -101,7 +101,7 @@ def run_regression(auto_input,
             fasit, fasit_key = rs.make_fasit(variable, region, reg_end, period)
             print('Fasit er lest inn.\n')
 
-            if fasit[fasit_key].isnull().any():
+            if fasit[fasit_key][:reg_end].isnull().any():
                 print('OBS: Det mangler verdier på fasiten! Går videre til neste region i loopen..')
                 continue
 
@@ -160,7 +160,7 @@ def run_regression(auto_input,
                 chosen_r2_beste = sorted_r2[:ant_kandidater_beste]
                 print("Input variables was read from: ", input_file)
 
-            # SHOW RESULTS
+            # MAKE ESTIMATE AND SHOW RESULTS
             input1 = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period_beste, max_p,
                                    chosen_r2_beste, loop=False)
             input2 = fasit_key, ant_kandidater_beste, max_p, reg_end, read_start
@@ -180,7 +180,7 @@ def run_regression(auto_input,
             if jupyter:
                 ws.show_result_jupyter(input1, input2)
             else:
-                ws.show_result(input1, input2)
+                ws.show_result(input1, input2, input_file)
 
     print('---------------------------------------------------------------')
     print('                         SLUTT                                 ')

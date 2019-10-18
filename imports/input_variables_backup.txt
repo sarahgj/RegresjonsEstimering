@@ -1,20 +1,20 @@
-#region variabel max_p ant_kandidater reg_period
-NO1 tilsig  0.025  22  29 
-NO1 magasin 0.025 112 200 
-NO2 tilsig  0.025  23  81 
-NO2 magasin 0.025  69 121 
-NO3 tilsig  0.025 190 108
-NO3 magasin 0.025 129  47
-NO4 tilsig  0.025 164 190
-NO4 magasin 0.025  96 127
-NO5 tilsig  0.025 110  84 
-NO5 magasin 0.025 133 108 
-SE1 tilsig  0.025 194 102
-SE1 magasin 0.025 104 149
-SE2 tilsig  0.025  36 118
-SE2 magasin 0.025  70  42
-SE3 tilsig  0.025 174 105
-SE3 magasin 0.025 119 140
-SE4 tilsig  0.025 181 203
-SE4 magasin 0.025  97 153
-#Sist oppdatert: 2019-07-02 fra resultater tuning.
+#region variabel max_p ant_kandidater reg_period date time (of update)
+NO1 tilsig  0.025 191  40 2019-10-07 11:04:00
+NO1 magasin 0.025 151  40 2019-10-07 10:56:00
+NO2 tilsig  0.025 170  40 2019-10-07 12:47:00
+NO2 magasin 0.025 121  40 2019-10-07 12:41:00
+NO3 tilsig  0.025 184  40 2019-10-02 09:15:00
+NO3 magasin 0.025 168  40 2019-10-07 13:08:00
+NO4 tilsig  0.025 179  40 2019-10-01 12:37:00
+NO4 magasin 0.025 159  40 2019-10-01 12:28:00
+NO5 tilsig  0.025 180  40 2019-10-08 manuelt
+NO5 magasin 0.025 160  40 2019-10-08 manuelt
+SE1 tilsig  0.025 158  40 2019-10-01 12:52:00
+SE1 magasin 0.025 141  40 2019-10-01 12:46:00
+SE2 tilsig  0.025 184  40 2019-10-01 13:05:00
+SE2 magasin 0.025 150  40 2019-10-01 12:57:00
+SE3 tilsig  0.025 180  40 2019-10-01 13:17:00
+SE3 magasin 0.025 152  40 2019-10-01 13:10:00
+SE4 tilsig  0.025 144  40 2019-10-01 13:28:00
+SE4 magasin 0.025 165  40 2019-10-01 13:23:00
+#alt endret manuelt 08/10
