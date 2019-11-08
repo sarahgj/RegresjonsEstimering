@@ -11,7 +11,7 @@ register_matplotlib_converters()
 from statkraft.ssa.wrappers import ReadWrapper
 
 from imports import import_from_SMG
-from tests import import_from_SMG_test
+#from tests import import_from_SMG_test
 
 #Global variables
 #today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now

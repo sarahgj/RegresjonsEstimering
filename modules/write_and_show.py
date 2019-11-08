@@ -47,7 +47,7 @@ def show_result(input1, input2, variable_file=False):
 
 
 def show_result_jupyter(input1, input2, variable_file=False):
-    fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_ps, short_period, nb_weeks_tipping = input1
+    fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, r2_modelled_long, prediction, tipping_ps, short_period, nb_weeks_tipping = input1
     fasit_key, ant_kandidater, max_p, reg_end, read_start = input2
     """This function prints out and plots the results from the regression."""
     plt.interactive(False)
@@ -143,10 +143,10 @@ def write_SMG_regresjon(variable, region, ps):
     result = smg.write([time_series_to_write])
 
 
-def write_V_SMG_Regresjon(results, chosen_p, fasit_key, r2_modelled, MagKap_mag=False):
+def write_V_SMG_Regresjon(results, chosen_p, fasit_key, r2_modelled, r2_modelled_long, short_period_beste, MagKap_mag=False):
     start_time = time.time()
     now = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')
-    expression = str('! Sist oppdatert {}\n!R2 med {} serier: {}\n'.format(now, len(chosen_p), r2_modelled))
+    expression = str('! Sist oppdatert {}\n!R2 (modell vs fasit) for periode tilbake til 08.06.2015: {:0.6f}\n!R2 (modell vs fasit) for periode tilbake {} uker: {:0.6f}\n'.format(now, r2_modelled_long, short_period_beste, r2_modelled))
     vekt_serie = "F{tall}={serie}*{vekt}\n"
     region = str(fasit_key[6:9])
 

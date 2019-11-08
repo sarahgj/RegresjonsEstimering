@@ -22,13 +22,13 @@ from tests import import_from_SMG_test
 
 #Global variables
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now
-max_final_numb_kandidater = 30
-max_input_series = 296
-nb_weeks_tipping = 10  # number of weeks to do tipping back in time
+max_final_numb_kandidater = 16
+max_input_series = 196
+nb_weeks_tipping = 15  # number of weeks to do tipping back in time
 tz = pytz.timezone('Etc/GMT-1')
 columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samlet', 'short_period', 'max_p']
-first_period = 216  # Length of the long regression in weeks
-min_kandidater = 6
+first_period = 230  # Length of the long regression in weeks
+min_kandidater = 1
 
 
 ########################################################################################################################
@@ -336,17 +336,17 @@ def run_regression(auto_input,
                 print('                        TILSIG                                 ')
                 print('---------------------------------------------------------------\n')
                 max_kandidater = 196
-                min_kandidater = 5
+                min_kandidater = 1
 
             else:
                 print('\n\n---------------------------------------------------------------')
                 print('                        MAGASIN                                ')
                 print('---------------------------------------------------------------\n')
-                max_kandidater = 135
-                min_kandidater = 5
+                max_kandidater = 171
+                min_kandidater = 1
 
-            max_weeks = 208
-            min_weeks = 10
+            max_weeks = 230
+            min_weeks = 16
             print('max ant. kandidater: {}, min ant. kandidater: {}'.format(max_kandidater, min_kandidater))
             print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
 
@@ -372,7 +372,7 @@ def run_regression(auto_input,
 
                 # First loop: Tuning number of candidates for best possible R2 combined
                 df_ant_kandidater = pd.DataFrame(columns=columns)
-                for antall in range(min_kandidater, max_kandidater + 1, 2):
+                for antall in range(min_kandidater, max_kandidater + 1, 1):
                     if antall > len(sorted_r2):
                         chosen_r2 = sorted_r2
                     else:
@@ -392,7 +392,7 @@ def run_regression(auto_input,
                 # Second loop: tuning length of the short regression for best possible R2 combined, using the best number of
                 # candidates found in the First loop.
                 df_short_period = pd.DataFrame(columns=columns)
-                for short_period in range(min_weeks, max_weeks + 1, 4):
+                for short_period in range(min_weeks, max_weeks + 1, 1):
                     short_period = int(short_period)
                     final_chosen_r2 = sorted_r2[:ant_kandidater_beste]
                     output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p,

@@ -16,12 +16,12 @@ from modules import write_and_show as ws
 
 #Global variables
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now
-max_final_numb_kandidater = 20 #25
+max_final_numb_kandidater = 16 #25
 max_input_series = 496 #196
-nb_weeks_tipping = 5  # number of weeks to do tipping back in time
+nb_weeks_tipping = 15  # number of weeks to do tipping back in time
 tz = pytz.timezone('Etc/GMT-1')
 columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samlet', 'short_period', 'max_p']
-first_period = 220 #219  # Length of the long regression in weeks
+first_period = 230 #260  # Length of the long regression in weeks
 min_kandidater = 1
 
 
@@ -92,8 +92,8 @@ def run_regression(auto_input,
                     max_kandidater = 171
                     min_kandidater = 1
 
-                max_weeks = 220 #288
-                min_weeks = 11
+                max_weeks = 230 #288
+                min_weeks = 16
                 print('max ant. kandidater: {}, min ant. kandidater: {}'.format(max_kandidater, min_kandidater))
                 print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
 
@@ -131,10 +131,10 @@ def run_regression(auto_input,
 
                 # Second loop: tuning length of the short regression for best possible R2 combined, using the best number of
                 # candidates found in the First loop.
+                final_chosen_r2 = sorted_r2[:ant_kandidater_beste]
                 df_short_period = pd.DataFrame(columns=columns)
                 for short_period in range(min_weeks, max_weeks + 1, 1):
                     short_period = int(short_period)
-                    final_chosen_r2 = sorted_r2[:ant_kandidater_beste]
                     output = make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max_p,
                                            final_chosen_r2, loop=True)
                     df_short_period = df_short_period.append(
@@ -169,13 +169,13 @@ def run_regression(auto_input,
             #WRITE RESULTS
             if write:
                 # Write results from the regression to SMG.
-                fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_ps, short_period, nb_weeks_tipping = input1
+                fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, r2_modelled_long, prediction, tipping_ps, short_period, nb_weeks_tipping = input1
 
                 # write to SMG:
                 ws.write_SMG_regresjon(variable, region, tipping_ps[-1:])
 
                 # write to SMG, virtual:
-                ws.write_V_SMG_Regresjon(short_results, chosen_p, fasit_key, r2_modelled, MagKap)
+                ws.write_V_SMG_Regresjon(short_results, chosen_p, fasit_key, r2_modelled, r2_modelled_long, short_period_beste, MagKap)
 
             if jupyter:
                 ws.show_result_jupyter(input1, input2)
@@ -234,6 +234,7 @@ def make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max
     reg_end = (pd.to_datetime(time.strftime(last_forecast), format="%Y.%m.%d") - Timedelta(days=7)).strftime(
         '%Y.%m.%d')  # 6*52
     long_results, chosen_p, ant_break = regression(df_tot.loc[:reg_end], fasit_key, chosen_r2, max_p)
+    r2_modelled_long = calc_R2(df_tot.loc[:reg_end][fasit_key], long_results.predict(df_tot.loc[:reg_end][chosen_p]))
 
     #########################################################################################
     # Forecast loop setup
@@ -272,7 +273,7 @@ def make_estimate(df_cleaned, fasit, fasit_key, last_forecast, short_period, max
     else:
         # end_time = time.time()
         # print('Time to run make_estimate(no loop): ',end_time-start_time)
-        return fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, prediction, tipping_ps, short_period, nb_weeks_tipping
+        return fasit, long_results, short_results, df_tot, chosen_p, chosen_r2, r2_modelled, r2_modelled_long, prediction, tipping_ps, short_period, nb_weeks_tipping
 
 
 def regression(df_tot, fasit_key, chosen, max_p):
