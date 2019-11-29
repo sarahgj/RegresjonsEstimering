@@ -16,12 +16,12 @@ from modules import write_and_show as ws
 
 #Global variables
 today = pd.to_datetime(time.strftime("%Y.%m.%d %H:%M"), format="%Y.%m.%d %H:%M", errors='ignore')  # now
-max_final_numb_kandidater = 16 #25
-max_input_series = 496 #196
+max_final_numb_kandidater = 16 # Beste testresultat SvF
+max_input_series = 556 #196
 nb_weeks_tipping = 15  # number of weeks to do tipping back in time
 tz = pytz.timezone('Etc/GMT-1')
 columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samlet', 'short_period', 'max_p']
-first_period = 230 #260  # Length of the long regression in weeks
+first_period = 232 #260  # Length of the long regression in weeks
 min_kandidater = 1
 
 
@@ -92,7 +92,7 @@ def run_regression(auto_input,
                     max_kandidater = 171
                     min_kandidater = 1
 
-                max_weeks = 230 #288
+                max_weeks = 232 #288
                 min_weeks = 16
                 print('max ant. kandidater: {}, min ant. kandidater: {}'.format(max_kandidater, min_kandidater))
                 print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
@@ -108,7 +108,7 @@ def run_regression(auto_input,
             sorted_r2 = get_R2_sorted(variable, df_cleaned, fasit, fasit_key)
 
             if loop:
-                max_p = 0.025
+                max_p = 0.001 # Beste testresultat SvF
 
                 # First loop: Tuning number of candidates for best possible R2 combined
                 df_ant_kandidater = pd.DataFrame(columns=columns)

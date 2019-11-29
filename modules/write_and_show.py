@@ -93,10 +93,7 @@ def show_result_jupyter(input1, input2, variable_file=False):
 
     # Plot just prediction:
     plt.figure(figsize=(16, 10))
-    if (0 <= today.weekday() <= 1) or (today.weekday() == 2 and today.hour < 14):  # True for tipping
-        plt.plot(fasit[fasit_key].loc[tipping_ps.index[0]:], color='k', linewidth=2.0, label='fasit')
-    else:
-        plt.plot(fasit[fasit_key].loc[tipping_ps.index[0]:reg_end], color='k', linewidth=2.0, label='fasit')
+    plt.plot(fasit[fasit_key].loc[tipping_ps.index[0]:], color='k', linewidth=2.0, label='fasit')
     plt.plot(tipping_ps, label='tipping', color=color_tipping)  # , marker='o')
     plt.title('Tipping for: %s' % fasit_key)
     plt.legend()
