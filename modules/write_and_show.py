@@ -104,9 +104,9 @@ def show_result_jupyter(input1, input2, variable_file=False):
     for key in chosen_p:
         if fasit_key[-3:] == '105':
             sfac = df_tot[fasit_key].mean() / df_tot[key].mean()
-            plt.plot(df_tot[key] * sfac)  # , marker='o')
+            plt.plot(df_tot[key] * sfac, label=key)  # , marker='o')
         elif fasit_key[-3:] == '132':
-            plt.plot(df_tot[key])  # , marker='o')
+            plt.plot(df_tot[key], label=key)  # , marker='o')
     plt.plot(tipping_ps, label='tipping', color=color_tipping)  # , marker='o')
     plt.title('Regresjonsserier for: %s' % fasit_key)
     plt.legend()

@@ -21,8 +21,8 @@ max_input_series = 556 #196
 nb_weeks_tipping = 15  # number of weeks to do tipping back in time
 tz = pytz.timezone('Etc/GMT-1')
 columns = ['ant_kandidater', 'ant_serier', 'r2_modelled', 'r2_tippet', 'r2_samlet', 'short_period', 'max_p']
-first_period = 232 #260  # Length of the long regression in weeks
-min_kandidater = 1
+first_period = 238 #260  # Length of the long regression in weeks
+min_kandidater = 2
 
 
 def run_regression(auto_input,
@@ -86,13 +86,13 @@ def run_regression(auto_input,
             if loop:
                 if variable == 'tilsig':
                     max_kandidater = 196
-                    min_kandidater = 1
+                    min_kandidater = 2
 
                 else:
                     max_kandidater = 171
-                    min_kandidater = 1
+                    min_kandidater = 2
 
-                max_weeks = 232 #288
+                max_weeks = 238 #288
                 min_weeks = 16
                 print('max ant. kandidater: {}, min ant. kandidater: {}'.format(max_kandidater, min_kandidater))
                 print('max ant. uker: {}, min ant. uker: {}'.format(max_weeks, min_weeks))
@@ -103,6 +103,7 @@ def run_regression(auto_input,
 
             if fasit[fasit_key][:reg_end].isnull().any():
                 print('OBS: Det mangler verdier på fasiten! Går videre til neste region i loopen..')
+                print(fasit[fasit_key][:reg_end].isnull())
                 continue
 
             sorted_r2 = get_R2_sorted(variable, df_cleaned, fasit, fasit_key)
